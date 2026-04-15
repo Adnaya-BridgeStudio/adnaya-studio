@@ -5,12 +5,12 @@ const fs = require('fs');
 const app = express();
 app.use(express.json());
 
-// 🔍 Route test simple
+// Test serveur
 app.get('/', (req, res) => {
   res.send("✅ ADNAYA SERVER IS RUNNING");
 });
 
-// 📄 Génération PDF SANS Google Drive
+// Endpoint PDF
 app.post('/generate-pdf', async (req, res) => {
   try {
     const { text } = req.body;
@@ -26,23 +26,31 @@ app.post('/generate-pdf', async (req, res) => {
     const filePath = `/tmp/${fileName}`;
 
     const doc = new PDFDocument();
+    const stream = fs.createWriteStream(filePath);
 
-    // écrire le PDF
-    doc.pipe(fs.createWriteStream(filePath));
+    doc.pipe(stream);
     doc.fontSize(14).text(text);
     doc.end();
 
-    // attendre la fin
-    doc.on('finish', () => {
+    // 🔥 solution fiable
+    stream.on('finish', () => {
       res.json({
         success: true,
-        message: "PDF généré avec succès (sans Google Drive)",
+        message: "PDF généré avec succès",
         file: fileName
       });
     });
 
+    stream.on('error', (err) => {
+      console.error("Stream error:", err);
+      res.status(500).json({
+        success: false,
+        error: "Erreur lors de la génération PDF"
+      });
+    });
+
   } catch (error) {
-    console.error("❌ ERREUR :", error);
+    console.error("Erreur serveur:", error);
     res.status(500).json({
       success: false,
       error: "Erreur serveur"
@@ -50,7 +58,6 @@ app.post('/generate-pdf', async (req, res) => {
   }
 });
 
-// 🔥 PORT (important pour Render)
 const PORT = process.env.PORT || 10000;
 
 app.listen(PORT, () => {
