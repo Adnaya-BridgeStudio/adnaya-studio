@@ -39,16 +39,21 @@ app.get('/auth', (req, res) => {
 });
 
 app.get('/auth/callback', async (req, res) => {
-  const { code } = req.query;
+  try {
+    const { code } = req.query;
 
-  const { tokens } = await oauth2Client.getToken(code);
-  oauth2Client.setCredentials(tokens);
+    const { tokens } = await oauth2Client.getToken(code);
+    oauth2Client.setCredentials(tokens);
 
-  fs.writeFileSync(TOKEN_PATH, JSON.stringify(tokens));
+    fs.writeFileSync(TOKEN_PATH, JSON.stringify(tokens));
 
-  console.log("✅ CONNECTÉ À GOOGLE DRIVE");
+    console.log("✅ CONNECTÉ À GOOGLE DRIVE");
 
-  res.send("Google Drive connecté ✅");
+    res.send("Google Drive connecté ✅");
+  } catch (error) {
+    console.error("❌ OAuth erreur:", error);
+    res.send("Erreur OAuth");
+  }
 });
 
 // ======================
@@ -136,7 +141,7 @@ async function createPDF(text, filePath) {
 }
 
 // ======================
-// 📤 UPLOAD DRIVE
+// 📤 UPLOAD DRIVE (DOSSIER FIXÉ)
 // ======================
 
 async function uploadToDrive(filePath, fileName) {
@@ -147,10 +152,10 @@ async function uploadToDrive(filePath, fileName) {
 
   const response = await drive.files.create({
     requestBody: {
-  name: fileName,
-  parents: ["1CtSfuBQCGqF7fgNFRSRlYUt7RLK8Aey8"],
-  mimeType: 'application/pdf'
-},
+      name: fileName,
+      parents: ["1CtSfuBQCGqF7fgNFRSRlYUt7RLK8Aey8"], // ✅ TON DOSSIER
+      mimeType: 'application/pdf'
+    },
     media: {
       mimeType: 'application/pdf',
       body: fs.createReadStream(filePath)
@@ -159,6 +164,7 @@ async function uploadToDrive(filePath, fileName) {
 
   const fileId = response.data.id;
 
+  // rendre public
   await drive.permissions.create({
     fileId,
     requestBody: {
@@ -185,6 +191,13 @@ app.get('/', (req, res) => {
 app.post('/generate-pdf', async (req, res) => {
   try {
     const { text } = req.body;
+
+    if (!text) {
+      return res.status(400).json({
+        success: false,
+        error: "Le champ 'text' est requis"
+      });
+    }
 
     const fileName = `file_${Date.now()}.pdf`;
     const filePath = `/tmp/${fileName}`;
@@ -213,6 +226,8 @@ app.post('/generate-pdf', async (req, res) => {
     });
   }
 });
+
+// ======================
 
 const PORT = process.env.PORT || 10000;
 
