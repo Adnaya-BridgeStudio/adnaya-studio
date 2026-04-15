@@ -1,73 +1,58 @@
 const express = require('express');
 const PDFDocument = require('pdfkit');
 const fs = require('fs');
-const { google } = require('googleapis');
 
 const app = express();
 app.use(express.json());
 
-// 🔐 Connexion Google Drive
-const auth = new google.auth.GoogleAuth({
-  credentials: JSON.parse(process.env.GOOGLE_CREDENTIALS),
-  scopes: ["https://www.googleapis.com/auth/drive.file"]
+// 🔍 Route test simple
+app.get('/', (req, res) => {
+  res.send("✅ ADNAYA SERVER IS RUNNING");
 });
 
-const drive = google.drive({ version: "v3", auth });
-
-// 📤 Upload vers Google Drive
-async function uploadToDrive(filePath, fileName) {
-  const response = await drive.files.create({
-    requestBody: {
-      name: fileName,
-      mimeType: "application/pdf"
-    },
-    media: {
-      mimeType: "application/pdf",
-      body: fs.createReadStream(filePath)
-    }
-  });
-
-  const fileId = response.data.id;
-
-  // rendre public
-  await drive.permissions.create({
-    fileId,
-    requestBody: {
-      role: "reader",
-      type: "anyone"
-    }
-  });
-
-  return `https://drive.google.com/file/d/${fileId}/view`;
-}
-
-// 📄 Endpoint principal
+// 📄 Génération PDF SANS Google Drive
 app.post('/generate-pdf', async (req, res) => {
   try {
     const { text } = req.body;
+
+    if (!text) {
+      return res.status(400).json({
+        success: false,
+        error: "Le champ 'text' est requis"
+      });
+    }
 
     const fileName = `file_${Date.now()}.pdf`;
     const filePath = `/tmp/${fileName}`;
 
     const doc = new PDFDocument();
+
+    // écrire le PDF
     doc.pipe(fs.createWriteStream(filePath));
     doc.fontSize(14).text(text);
     doc.end();
 
-    doc.on('finish', async () => {
-      const link = await uploadToDrive(filePath, fileName);
-
+    // attendre la fin
+    doc.on('finish', () => {
       res.json({
         success: true,
-        pdf_url: link
+        message: "PDF généré avec succès (sans Google Drive)",
+        file: fileName
       });
     });
 
-  } catch (err) {
-    res.status(500).json({ error: err.message });
+  } catch (error) {
+    console.error("❌ ERREUR :", error);
+    res.status(500).json({
+      success: false,
+      error: "Erreur serveur"
+    });
   }
 });
 
-// 🚀 Port Render
+// 🔥 PORT (important pour Render)
 const PORT = process.env.PORT || 10000;
-app.listen(PORT, () => console.log("Server running"));
+
+app.listen(PORT, () => {
+  console.log(`🚀 Server running on port ${PORT}`);
+});
