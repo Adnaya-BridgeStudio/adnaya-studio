@@ -1,6 +1,6 @@
 const express = require('express');
 const fs = require('fs');
-const puppeteer = require('puppeteer');
+const chromium = require('chrome-aws-lambda');
 const { google } = require('googleapis');
 
 const app = express();
@@ -57,7 +57,7 @@ app.get('/auth/callback', async (req, res) => {
 });
 
 // ======================
-// 🎨 HTML PREMIUM
+// 🎨 TEMPLATE HTML PREMIUM
 // ======================
 
 function generateHTML(content) {
@@ -88,13 +88,14 @@ function generateHTML(content) {
 }
 
 // ======================
-// 📄 PDF PREMIUM (FIX CHROME)
+// 📄 PDF PREMIUM (FIX CHROME CLOUD)
 // ======================
 
 async function createPDF(text, filePath) {
-  const browser = await puppeteer.launch({
-    headless: "new",
-    args: ['--no-sandbox', '--disable-setuid-sandbox']
+  const browser = await chromium.puppeteer.launch({
+    args: chromium.args,
+    executablePath: await chromium.executablePath,
+    headless: true
   });
 
   const page = await browser.newPage();
@@ -154,6 +155,10 @@ async function uploadToDrive(filePath, fileName) {
 app.get('/', (req, res) => {
   res.send("✅ ADNAYA SERVER IS RUNNING");
 });
+
+// ======================
+// 🚀 API PRINCIPALE
+// ======================
 
 app.post('/generate-pdf', async (req, res) => {
   try {
