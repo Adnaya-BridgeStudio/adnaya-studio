@@ -48,13 +48,8 @@ app.get('/auth/callback', async (req, res) => {
   res.send("Google Drive connecté ✅");
 });
 
-// 📤 Upload Drive sécurisé
+// 📤 Upload Drive
 async function uploadToDrive(filePath, fileName, mimeType) {
-
-  if (!oauth2Client.credentials || !oauth2Client.credentials.access_token) {
-    throw new Error("Google Drive non authentifié. Va sur /auth");
-  }
-
   const drive = google.drive({ version: 'v3', auth: oauth2Client });
 
   const response = await drive.files.create({
@@ -105,37 +100,37 @@ app.post('/generate-pdf', async (req, res) => {
     doc.end();
 
     stream.on('finish', async () => {
-      const link = await uploadToDrive(filePath, fileName, 'application/pdf');
+      try {
+        const link = await uploadToDrive(filePath, fileName, 'application/pdf');
 
-      return res.json({
-        success: true,
-        pdf_url: link
-      });
+        return res.json({
+          success: true,
+          pdf_url: link
+        });
+      } catch (err) {
+        return res.json({ success: false, error: err.message });
+      }
     });
 
   } catch (err) {
-    console.error(err);
-    return res.status(500).json({ success: false, error: err.message });
+    return res.json({ success: false, error: err.message });
   }
 });
 
 
 // =======================
-// 🖼️ MULTI-FILE UPLOAD
+// 🖼️ UPLOAD MULTI FORMAT (STABLE)
 // =======================
 app.post('/upload-image', upload.single('image'), async (req, res) => {
+  console.log("📥 Upload reçu");
+
+  const file = req.file;
+
+  if (!file) {
+    return res.json({ success: false, error: "Aucun fichier" });
+  }
+
   try {
-    console.log("📥 Fichier reçu");
-
-    const file = req.file;
-
-    if (!file) {
-      return res.status(400).json({
-        success: false,
-        error: "Aucun fichier"
-      });
-    }
-
     const fileName = `file_${Date.now()}_${file.originalname}`;
 
     const link = await uploadToDrive(
@@ -154,9 +149,9 @@ app.post('/upload-image', upload.single('image'), async (req, res) => {
   } catch (err) {
     console.error("❌ ERREUR:", err);
 
-    return res.status(500).json({
+    return res.json({
       success: false,
-      error: err.message
+      error: "Erreur upload Drive"
     });
   }
 });
