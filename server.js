@@ -25,7 +25,7 @@ if (fs.existsSync(TOKEN_PATH)) {
   console.log("✅ Token chargé");
 }
 
-// 🔗 Auth Google
+// 🔗 Auth
 app.get('/auth', (req, res) => {
   const url = oauth2Client.generateAuthUrl({
     access_type: 'offline',
@@ -46,15 +46,14 @@ app.get('/auth/callback', async (req, res) => {
   res.send("Google Drive connecté ✅");
 });
 
-// 📤 Upload générique (PDF ou IMAGE)
+// 📤 Upload Drive
 async function uploadToDrive(filePath, fileName, mimeType) {
   const drive = google.drive({ version: 'v3', auth: oauth2Client });
 
   const response = await drive.files.create({
     requestBody: {
       name: fileName,
-      parents: ["1CtSfuBQCGqF7fgNFRSRlYUt7RLK8Aey8"],
-      mimeType: mimeType
+      parents: ["1CtSfuBQCGqF7fgNFRSRlYUt7RLK8Aey8"]
     },
     media: {
       mimeType: mimeType,
@@ -75,15 +74,15 @@ async function uploadToDrive(filePath, fileName, mimeType) {
   return `https://drive.google.com/file/d/${fileId}/view`;
 }
 
-// 🟢 TEST
+// 🟢 Test
 app.get('/', (req, res) => {
   res.send("✅ ADNAYA SERVER IS RUNNING");
 });
 
 
-// =========================
+// =======================
 // 📄 PDF
-// =========================
+// =======================
 app.post('/generate-pdf', async (req, res) => {
   try {
     const { text } = req.body;
@@ -101,23 +100,26 @@ app.post('/generate-pdf', async (req, res) => {
     stream.on('finish', async () => {
       const link = await uploadToDrive(filePath, fileName, 'application/pdf');
 
-      res.json({
+      return res.json({
         success: true,
         pdf_url: link
       });
     });
 
   } catch (err) {
-    res.status(500).json({ success: false, error: err.message });
+    console.error(err);
+    return res.status(500).json({ success: false, error: err.message });
   }
 });
 
 
-// =========================
-// 🖼️ IMAGE (NOUVEAU 🔥)
-// =========================
+// =======================
+// 🖼️ UPLOAD MULTI FORMAT
+// =======================
 app.post('/upload-image', upload.single('image'), async (req, res) => {
   try {
+    console.log("📥 Fichier reçu");
+
     const file = req.file;
 
     if (!file) {
@@ -127,7 +129,7 @@ app.post('/upload-image', upload.single('image'), async (req, res) => {
       });
     }
 
-    const fileName = `image_${Date.now()}_${file.originalname}`;
+    const fileName = `file_${Date.now()}_${file.originalname}`;
 
     const link = await uploadToDrive(
       file.path,
@@ -135,20 +137,22 @@ app.post('/upload-image', upload.single('image'), async (req, res) => {
       file.mimetype
     );
 
-    res.json({
+    console.log("✅ Upload OK:", link);
+
+    return res.json({
       success: true,
       image_url: link
     });
 
   } catch (err) {
-    console.error(err);
-    res.status(500).json({
+    console.error("❌ ERREUR:", err);
+
+    return res.status(500).json({
       success: false,
       error: err.message
     });
   }
 });
-
 
 const PORT = process.env.PORT || 10000;
 
