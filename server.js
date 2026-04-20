@@ -17,11 +17,9 @@ const TOKEN_PATH='/tmp/token.json';
 
 const oauth2Client=
 new google.auth.OAuth2(
-
 process.env.GOOGLE_CLIENT_ID,
 process.env.GOOGLE_CLIENT_SECRET,
 process.env.GOOGLE_REDIRECT_URI
-
 );
 
 
@@ -41,7 +39,6 @@ oauth2Client.setCredentials(tokens);
 console.log("✅ Token chargé");
 
 }
-
 
 
 // =======================
@@ -66,7 +63,6 @@ res.redirect(url);
 });
 
 
-
 app.get(
 '/auth/callback',
 async(req,res)=>{
@@ -83,10 +79,6 @@ TOKEN_PATH,
 JSON.stringify(tokens)
 );
 
-console.log(
-"✅ CONNECTÉ À GOOGLE DRIVE"
-);
-
 res.send(
 "Google Drive connecté ✅"
 );
@@ -95,25 +87,20 @@ res.send(
 
 
 
-
 // =======================
 // DRIVE
 // =======================
 
 async function uploadToDrive(
-
 filePath,
 fileName,
 mimeType='application/pdf'
-
 ){
 
 const drive=
 google.drive({
-
 version:'v3',
 auth:oauth2Client
-
 });
 
 
@@ -121,7 +108,6 @@ const response=
 await drive.files.create({
 
 requestBody:{
-
 name:fileName,
 
 parents:[
@@ -131,14 +117,11 @@ parents:[
 },
 
 media:{
-
 mimeType:mimeType,
-
 body:
 fs.createReadStream(
 filePath
 )
-
 }
 
 });
@@ -153,21 +136,16 @@ await drive.permissions.create({
 fileId,
 
 requestBody:{
-
 role:'reader',
-
 type:'anyone'
-
 }
 
 });
 
 
-// 🔥 BUG FIX undefined
 return `https://drive.google.com/file/d/${fileId}/view`;
 
 }
-
 
 
 
@@ -187,7 +165,7 @@ res.send(
 
 
 // =======================
-// PDF ENGINE
+// PDF ENGINE FINAL
 // =======================
 
 app.post(
@@ -207,10 +185,8 @@ const filePath=
 
 const doc=
 new PDFDocument({
-
 size:'A4',
 margin:55
-
 });
 
 
@@ -222,17 +198,42 @@ filePath
 doc.pipe(stream);
 
 
+// PAGE NUMBERS
+
+let pageNum=1;
+
+doc.on(
+'pageAdded',
+()=>{
+
+pageNum++;
+
+doc.fontSize(8);
+
+doc.fillColor('#777777');
+
+doc.text(
+`Page ${pageNum}`,
+50,
+770,
+{
+align:'center'
+}
+);
+
+}
+);
+
+
+
 // ======================
-// CLEAN TEXT
+// CLEAN
 // ======================
 
 let cleanText=
 (text||"")
 
-.replace(
-/\r\n/g,
-"\n"
-)
+.replace(/\r\n/g,"\n")
 
 .replace(
 /[^\x09\x0A\x0D\x20-\x7EÀ-ÿ•]/g,
@@ -252,9 +253,35 @@ cleanText.split('\n');
 
 
 
+function safeBottom(){
+
+if(
+doc.y > 700
+){
+
+doc.addPage();
+
+}
+
+}
+
+
+function keepWithNext(){
+
+if(
+doc.y > 650
+){
+
+doc.addPage();
+
+}
+
+}
+
+
+
 // ======================
-// FORMAT ONLY
-// (NO CHANGE OF CONTENT)
+// COMPOSITION
 // ======================
 
 paragraphs.forEach(p=>{
@@ -271,8 +298,7 @@ return;
 }
 
 
-
-// LISTES SI EXISTENT
+// LISTES
 
 if(
 
@@ -289,6 +315,8 @@ line.startsWith('• ')
 
 ){
 
+safeBottom();
+
 doc
 
 .fillColor('#111111')
@@ -302,18 +330,14 @@ doc
 line,
 
 {
-
 indent:18,
-
 lineGap:4,
-
 align:'left'
-
 }
 
 );
 
-doc.moveDown(.3);
+doc.moveDown(.35);
 
 return;
 
@@ -321,8 +345,7 @@ return;
 
 
 
-
-// TITRES LÉGERS
+// TITRES
 
 if(
 
@@ -342,7 +365,9 @@ line.endsWith(':')
 
 ){
 
-doc.moveDown(.6);
+keepWithNext();
+
+doc.moveDown(.8);
 
 doc
 
@@ -352,21 +377,19 @@ doc
 'Helvetica-Bold'
 )
 
-.fontSize(13.5)
+.fontSize(17)
 
 .text(
 
 line,
 
 {
-
 align:'left'
-
 }
 
 );
 
-doc.moveDown(.4);
+doc.moveDown(.55);
 
 return;
 
@@ -374,8 +397,9 @@ return;
 
 
 
+// PARAGRAPHES
 
-// PARAGRAPHE NORMAL
+safeBottom();
 
 doc
 
@@ -400,8 +424,7 @@ lineGap:5
 );
 
 
-doc.moveDown(.5);
-
+doc.moveDown(.55);
 
 
 });
@@ -412,6 +435,8 @@ doc.moveDown(.5);
 // ======================
 // SIGNATURE
 // ======================
+
+safeBottom();
 
 doc.moveDown(2);
 
@@ -615,57 +640,39 @@ END REQUEST
 
 
 const fileNameTxt=
-
 `REQUEST_${date}_${Date.now()}.txt`;
 
-
 const filePathTxt=
-
 `/tmp/${fileNameTxt}`;
 
 
 
 fs.writeFileSync(
-
 filePathTxt,
-
 content,
-
 'utf8'
-
 );
-
 
 
 
 await uploadToDrive(
-
 filePathTxt,
-
 fileNameTxt,
-
 'text/plain'
-
 );
-
 
 
 
 if(file){
 
 const fileName=
-
 `FILE_${date}_${file.originalname}`;
 
 
 await uploadToDrive(
-
 file.path,
-
 fileName,
-
 file.mimetype
-
 );
 
 }
@@ -673,11 +680,8 @@ file.mimetype
 
 
 return res.json({
-
 success:true
-
 });
-
 
 
 }
@@ -685,11 +689,8 @@ success:true
 catch(err){
 
 console.error(
-
 "❌ ERREUR REQUETE:",
-
 err
-
 );
 
 return res.json({
@@ -708,7 +709,6 @@ error:err.message
 
 
 
-
 const PORT=
 process.env.PORT||10000;
 
@@ -716,9 +716,7 @@ process.env.PORT||10000;
 app.listen(PORT,()=>{
 
 console.log(
-
 `🚀 Server running on port ${PORT}`
-
 );
 
 });
