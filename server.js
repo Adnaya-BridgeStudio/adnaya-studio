@@ -13,12 +13,15 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-const TOKEN_PATH = '/tmp/token.json';
+const TOKEN_PATH='/tmp/token.json';
 
-const oauth2Client = new google.auth.OAuth2(
- process.env.GOOGLE_CLIENT_ID,
- process.env.GOOGLE_CLIENT_SECRET,
- process.env.GOOGLE_REDIRECT_URI
+const oauth2Client=
+new google.auth.OAuth2(
+
+process.env.GOOGLE_CLIENT_ID,
+process.env.GOOGLE_CLIENT_SECRET,
+process.env.GOOGLE_REDIRECT_URI
+
 );
 
 
@@ -26,17 +29,19 @@ const oauth2Client = new google.auth.OAuth2(
 // TOKEN
 // =======================
 
-if (fs.existsSync(TOKEN_PATH)) {
+if(fs.existsSync(TOKEN_PATH)){
 
- const tokens = JSON.parse(
-   fs.readFileSync(TOKEN_PATH)
- );
+const tokens=
+JSON.parse(
+fs.readFileSync(TOKEN_PATH)
+);
 
- oauth2Client.setCredentials(tokens);
+oauth2Client.setCredentials(tokens);
 
- console.log("✅ Token chargé");
+console.log("✅ Token chargé");
 
 }
+
 
 
 // =======================
@@ -45,109 +50,124 @@ if (fs.existsSync(TOKEN_PATH)) {
 
 app.get('/auth',(req,res)=>{
 
- const url=
- oauth2Client.generateAuthUrl({
+const url=
+oauth2Client.generateAuthUrl({
 
-   access_type:'offline',
+access_type:'offline',
 
-   scope:[
-    'https://www.googleapis.com/auth/drive.file'
-   ]
+scope:[
+'https://www.googleapis.com/auth/drive.file'
+]
 
- });
+});
 
- res.redirect(url);
+res.redirect(url);
 
 });
 
 
-app.get('/auth/callback',async(req,res)=>{
 
- const { code } = req.query;
+app.get(
+'/auth/callback',
+async(req,res)=>{
 
- const { tokens }=
- await oauth2Client.getToken(code);
+const {code}=req.query;
 
- oauth2Client.setCredentials(tokens);
+const {tokens}=
+await oauth2Client.getToken(code);
 
- fs.writeFileSync(
-  TOKEN_PATH,
-  JSON.stringify(tokens)
- );
+oauth2Client.setCredentials(tokens);
 
- console.log("✅ CONNECTÉ À GOOGLE DRIVE");
+fs.writeFileSync(
+TOKEN_PATH,
+JSON.stringify(tokens)
+);
 
- res.send("Google Drive connecté ✅");
+console.log(
+"✅ CONNECTÉ À GOOGLE DRIVE"
+);
+
+res.send(
+"Google Drive connecté ✅"
+);
 
 });
+
+
 
 
 // =======================
-// UPLOAD DRIVE
+// DRIVE
 // =======================
 
 async function uploadToDrive(
- filePath,
- fileName,
- mimeType='application/pdf'
+
+filePath,
+fileName,
+mimeType='application/pdf'
+
 ){
 
- const drive=google.drive({
+const drive=
+google.drive({
 
-  version:'v3',
-  auth:oauth2Client
+version:'v3',
+auth:oauth2Client
 
- });
-
-
- const response=
- await drive.files.create({
-
-   requestBody:{
-
-      name:fileName,
-
-      parents:[
-      "1CtSfuBQCGqF7fgNFRSRlYUt7RLK8Aey8"
-      ]
-
-   },
-
-   media:{
-
-      mimeType:mimeType,
-
-      body:fs.createReadStream(
-       filePath
-      )
-
-   }
-
- });
+});
 
 
- const fileId=response.data.id;
+const response=
+await drive.files.create({
 
+requestBody:{
 
- await drive.permissions.create({
+name:fileName,
 
-   fileId,
+parents:[
+"1CtSfuBQCGqF7fgNFRSRlYUt7RLK8Aey8"
+]
 
-   requestBody:{
+},
 
-      role:'reader',
+media:{
 
-      type:'anyone'
+mimeType:mimeType,
 
-   }
-
- });
-
-
- return
- `https://drive.google.com/file/d/${fileId}/view`;
+body:
+fs.createReadStream(
+filePath
+)
 
 }
+
+});
+
+
+const fileId=
+response.data.id;
+
+
+await drive.permissions.create({
+
+fileId,
+
+requestBody:{
+
+role:'reader',
+
+type:'anyone'
+
+}
+
+});
+
+
+// 🔥 BUG FIX undefined
+return `https://drive.google.com/file/d/${fileId}/view`;
+
+}
+
 
 
 
@@ -167,14 +187,16 @@ res.send(
 
 
 // =======================
-// PDF PRO ENGINE
+// PDF ENGINE
 // =======================
 
-app.post('/generate-pdf',async(req,res)=>{
+app.post(
+'/generate-pdf',
+async(req,res)=>{
 
 try{
 
-const { text } = req.body;
+const {text}=req.body;
 
 const fileName=
 `file_${Date.now()}.pdf`;
@@ -187,144 +209,83 @@ const doc=
 new PDFDocument({
 
 size:'A4',
-margin:50
+margin:55
 
 });
 
 
 const stream=
-fs.createWriteStream(filePath);
+fs.createWriteStream(
+filePath
+);
 
 doc.pipe(stream);
 
 
-// =========================
-// CLEAN INPUT
-// =========================
+// ======================
+// CLEAN TEXT
+// ======================
 
-let cleanText=(text||"")
+let cleanText=
+(text||"")
 
-.replace(/\r\n/g,"\n")
+.replace(
+/\r\n/g,
+"\n"
+)
 
 .replace(
 /[^\x09\x0A\x0D\x20-\x7EÀ-ÿ•]/g,
 ''
 )
 
-.replace(/\n{3,}/g,"\n\n")
+.replace(
+/\n{3,}/g,
+"\n\n"
+)
 
 .trim();
 
 
-const lines=
+const paragraphs=
 cleanText.split('\n');
 
 
-// =========================
-// HEADER
-// =========================
 
-doc
+// ======================
+// FORMAT ONLY
+// (NO CHANGE OF CONTENT)
+// ======================
 
-.fillColor('#0A66C2')
+paragraphs.forEach(p=>{
 
-.fontSize(20)
+const line=
+p.trim();
 
-.font('Helvetica-Bold')
+if(!line){
 
-.text(
-'ADNAYA Studio Document',
-{
-align:'center'
-}
-);
-
-
-doc.moveDown(0.5);
-
-
-doc
-
-.strokeColor('#cccccc')
-
-.lineWidth(1)
-
-.moveTo(50,doc.y)
-
-.lineTo(545,doc.y)
-
-.stroke();
-
-
-doc.moveDown(1.5);
-
-
-// =========================
-// SMART FORMATTER
-// =========================
-
-lines.forEach(line=>{
-
-const l=line.trim();
-
-if(!l){
-
-doc.moveDown(0.5);
+doc.moveDown(.7);
 
 return;
 
 }
 
 
-// ===== TITRES
+
+// LISTES SI EXISTENT
 
 if(
 
-l===l.toUpperCase()
+line.startsWith('- ')
 
 ||
 
-l.endsWith(':')
-
-){
-
-doc.moveDown(0.8);
-
-doc
-
-.fillColor('#0A66C2')
-
-.fontSize(15)
-
-.font('Helvetica-Bold')
-
-.text(
-l,
-{
-align:'left'
-}
-);
-
-doc.moveDown(0.4);
-
-return;
-
-}
-
-
-// ===== LISTES
-
-if(
-
-l.startsWith('- ')
+line.startsWith('• ')
 
 ||
 
-l.startsWith('• ')
-
-||
-
-/^[0-9]+\./.test(l)
+/^[0-9]+\./
+.test(line)
 
 ){
 
@@ -332,48 +293,101 @@ doc
 
 .fillColor('#111111')
 
-.fontSize(11)
-
 .font('Helvetica')
+
+.fontSize(11.5)
 
 .text(
 
-'• '+
-
-l.replace(
-/^[-•]\s?/,''
-),
+line,
 
 {
 
-indent:20,
+indent:18,
 
-align:'left',
+lineGap:4,
 
-lineGap:4
+align:'left'
 
 }
 
 );
+
+doc.moveDown(.3);
 
 return;
 
 }
 
 
-// ===== PARAGRAPHES
+
+
+// TITRES LÉGERS
+
+if(
+
+line.length<65
+
+&&
+
+(
+
+line===line.toUpperCase()
+
+||
+
+line.endsWith(':')
+
+)
+
+){
+
+doc.moveDown(.6);
+
+doc
+
+.fillColor('#0A66C2')
+
+.font(
+'Helvetica-Bold'
+)
+
+.fontSize(13.5)
+
+.text(
+
+line,
+
+{
+
+align:'left'
+
+}
+
+);
+
+doc.moveDown(.4);
+
+return;
+
+}
+
+
+
+
+// PARAGRAPHE NORMAL
 
 doc
 
 .fillColor('#222222')
 
-.fontSize(11.5)
-
 .font('Helvetica')
+
+.fontSize(11.5)
 
 .text(
 
-l,
+line,
 
 {
 
@@ -385,31 +399,40 @@ lineGap:5
 
 );
 
-doc.moveDown(0.4);
+
+doc.moveDown(.5);
+
 
 
 });
 
 
-// =========================
-// FOOTER
-// =========================
+
+
+// ======================
+// SIGNATURE
+// ======================
 
 doc.moveDown(2);
-
 
 doc
 
 .strokeColor('#dddddd')
 
-.moveTo(50,doc.y)
+.moveTo(
+55,
+doc.y
+)
 
-.lineTo(545,doc.y)
+.lineTo(
+540,
+doc.y
+)
 
 .stroke();
 
 
-doc.moveDown(0.5);
+doc.moveDown(.6);
 
 
 doc
@@ -431,12 +454,14 @@ align:'center'
 );
 
 
+
 doc.end();
 
 
-// =========================
+
+// ======================
 // UPLOAD
-// =========================
+// ======================
 
 stream.on(
 'finish',
@@ -457,7 +482,7 @@ fileName,
 );
 
 
-res.json({
+return res.json({
 
 success:true,
 
@@ -472,7 +497,7 @@ catch(err){
 
 console.error(err);
 
-res.status(500).json({
+return res.status(500).json({
 
 success:false,
 
@@ -484,23 +509,28 @@ error:err.message
 
 });
 
+
+
 }
 
 catch(err){
 
 console.error(err);
 
-res.status(500).json({
+return res.status(500).json({
 
 success:false,
 
-error:"Erreur serveur"
+error:'Erreur serveur'
 
 });
 
 }
 
 });
+
+
+
 
 
 
@@ -515,14 +545,18 @@ async(req,res)=>{
 
 try{
 
-const { text, contact }=
-req.body;
+const {
+text,
+contact
+}=req.body;
 
 const file=req.file;
 
 
 if(
-!text || !contact
+!text
+||
+!contact
 ){
 
 return res.json({
@@ -537,11 +571,14 @@ error:
 }
 
 
-// CLEAN
 
-const cleanText=text
+const cleanText=
+text
 
-.replace(/\r\n/g,"\n")
+.replace(
+/\r\n/g,
+"\n"
+)
 
 .replace(
 /\n{3,}/g,
@@ -576,21 +613,30 @@ END REQUEST
 `;
 
 
+
 const fileNameTxt=
+
 `REQUEST_${date}_${Date.now()}.txt`;
 
+
 const filePathTxt=
+
 `/tmp/${fileNameTxt}`;
 
 
+
 fs.writeFileSync(
+
 filePathTxt,
+
 content,
+
 'utf8'
+
 );
 
 
-// upload txt
+
 
 await uploadToDrive(
 
@@ -603,9 +649,12 @@ fileNameTxt,
 );
 
 
+
+
 if(file){
 
 const fileName=
+
 `FILE_${date}_${file.originalname}`;
 
 
@@ -622,6 +671,7 @@ file.mimetype
 }
 
 
+
 return res.json({
 
 success:true
@@ -629,13 +679,17 @@ success:true
 });
 
 
+
 }
 
 catch(err){
 
 console.error(
+
 "❌ ERREUR REQUETE:",
+
 err
+
 );
 
 return res.json({
@@ -653,7 +707,7 @@ error:err.message
 
 
 
-// =======================
+
 
 const PORT=
 process.env.PORT||10000;
@@ -662,7 +716,9 @@ process.env.PORT||10000;
 app.listen(PORT,()=>{
 
 console.log(
+
 `🚀 Server running on port ${PORT}`
+
 );
 
 });
