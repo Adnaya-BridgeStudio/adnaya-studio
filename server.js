@@ -41,6 +41,7 @@ console.log("✅ Token chargé");
 }
 
 
+
 // =======================
 // AUTH
 // =======================
@@ -63,6 +64,7 @@ res.redirect(url);
 });
 
 
+
 app.get(
 '/auth/callback',
 async(req,res)=>{
@@ -79,6 +81,10 @@ TOKEN_PATH,
 JSON.stringify(tokens)
 );
 
+console.log(
+"✅ CONNECTÉ À GOOGLE DRIVE"
+);
+
 res.send(
 "Google Drive connecté ✅"
 );
@@ -87,20 +93,25 @@ res.send(
 
 
 
+
 // =======================
 // DRIVE
 // =======================
 
 async function uploadToDrive(
+
 filePath,
 fileName,
 mimeType='application/pdf'
+
 ){
 
 const drive=
 google.drive({
+
 version:'v3',
 auth:oauth2Client
+
 });
 
 
@@ -108,6 +119,7 @@ const response=
 await drive.files.create({
 
 requestBody:{
+
 name:fileName,
 
 parents:[
@@ -117,11 +129,14 @@ parents:[
 },
 
 media:{
+
 mimeType:mimeType,
+
 body:
 fs.createReadStream(
 filePath
 )
+
 }
 
 });
@@ -136,8 +151,11 @@ await drive.permissions.create({
 fileId,
 
 requestBody:{
+
 role:'reader',
+
 type:'anyone'
+
 }
 
 });
@@ -146,6 +164,7 @@ type:'anyone'
 return `https://drive.google.com/file/d/${fileId}/view`;
 
 }
+
 
 
 
@@ -165,7 +184,7 @@ res.send(
 
 
 // =======================
-// PDF ENGINE FINAL
+// PDF ENGINE
 // =======================
 
 app.post(
@@ -185,8 +204,10 @@ const filePath=
 
 const doc=
 new PDFDocument({
+
 size:'A4',
 margin:55
+
 });
 
 
@@ -198,42 +219,17 @@ filePath
 doc.pipe(stream);
 
 
-// PAGE NUMBERS
-
-let pageNum=1;
-
-doc.on(
-'pageAdded',
-()=>{
-
-pageNum++;
-
-doc.fontSize(8);
-
-doc.fillColor('#777777');
-
-doc.text(
-`Page ${pageNum}`,
-50,
-770,
-{
-align:'center'
-}
-);
-
-}
-);
-
-
-
 // ======================
-// CLEAN
+// CLEAN TEXT
 // ======================
 
 let cleanText=
 (text||"")
 
-.replace(/\r\n/g,"\n")
+.replace(
+/\r\n/g,
+"\n"
+)
 
 .replace(
 /[^\x09\x0A\x0D\x20-\x7EÀ-ÿ•]/g,
@@ -253,10 +249,14 @@ cleanText.split('\n');
 
 
 
+// ======================
+// PAGE SAFETY
+// ======================
+
 function safeBottom(){
 
 if(
-doc.y > 700
+doc.y>710
 ){
 
 doc.addPage();
@@ -269,7 +269,7 @@ doc.addPage();
 function keepWithNext(){
 
 if(
-doc.y > 650
+doc.y>670
 ){
 
 doc.addPage();
@@ -281,13 +281,14 @@ doc.addPage();
 
 
 // ======================
-// COMPOSITION
+// FORMAT
 // ======================
 
 paragraphs.forEach(p=>{
 
 const line=
 p.trim();
+
 
 if(!line){
 
@@ -296,6 +297,7 @@ doc.moveDown(.7);
 return;
 
 }
+
 
 
 // LISTES
@@ -330,9 +332,13 @@ doc
 line,
 
 {
+
 indent:18,
+
 lineGap:4,
+
 align:'left'
+
 }
 
 );
@@ -342,6 +348,7 @@ doc.moveDown(.35);
 return;
 
 }
+
 
 
 
@@ -367,7 +374,7 @@ line.endsWith(':')
 
 keepWithNext();
 
-doc.moveDown(.8);
+doc.moveDown(.7);
 
 doc
 
@@ -377,23 +384,26 @@ doc
 'Helvetica-Bold'
 )
 
-.fontSize(17)
+.fontSize(15.5)
 
 .text(
 
 line,
 
 {
+
 align:'left'
+
 }
 
 );
 
-doc.moveDown(.55);
+doc.moveDown(.45);
 
 return;
 
 }
+
 
 
 
@@ -424,7 +434,8 @@ lineGap:5
 );
 
 
-doc.moveDown(.55);
+doc.moveDown(.5);
+
 
 
 });
@@ -481,6 +492,7 @@ align:'center'
 
 
 doc.end();
+
 
 
 
@@ -553,6 +565,7 @@ error:'Erreur serveur'
 }
 
 });
+
 
 
 
@@ -640,39 +653,57 @@ END REQUEST
 
 
 const fileNameTxt=
+
 `REQUEST_${date}_${Date.now()}.txt`;
 
+
 const filePathTxt=
+
 `/tmp/${fileNameTxt}`;
 
 
 
 fs.writeFileSync(
+
 filePathTxt,
+
 content,
+
 'utf8'
+
 );
+
 
 
 
 await uploadToDrive(
+
 filePathTxt,
+
 fileNameTxt,
+
 'text/plain'
+
 );
+
 
 
 
 if(file){
 
 const fileName=
+
 `FILE_${date}_${file.originalname}`;
 
 
 await uploadToDrive(
+
 file.path,
+
 fileName,
+
 file.mimetype
+
 );
 
 }
@@ -680,8 +711,11 @@ file.mimetype
 
 
 return res.json({
+
 success:true
+
 });
+
 
 
 }
@@ -689,8 +723,11 @@ success:true
 catch(err){
 
 console.error(
+
 "❌ ERREUR REQUETE:",
+
 err
+
 );
 
 return res.json({
@@ -709,6 +746,7 @@ error:err.message
 
 
 
+
 const PORT=
 process.env.PORT||10000;
 
@@ -716,7 +754,9 @@ process.env.PORT||10000;
 app.listen(PORT,()=>{
 
 console.log(
+
 `🚀 Server running on port ${PORT}`
+
 );
 
 });
