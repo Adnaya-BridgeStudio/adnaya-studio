@@ -22,6 +22,10 @@ process.env.GOOGLE_CLIENT_SECRET,
 process.env.GOOGLE_REDIRECT_URI
 );
 
+oauth2Client.setCredentials({
+refresh_token:
+process.env.GOOGLE_REFRESH_TOKEN
+});
 
 // =======================
 // TOKEN
