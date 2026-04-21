@@ -17,11 +17,9 @@ const TOKEN_PATH='/tmp/token.json';
 
 const oauth2Client=
 new google.auth.OAuth2(
-
 process.env.GOOGLE_CLIENT_ID,
 process.env.GOOGLE_CLIENT_SECRET,
 process.env.GOOGLE_REDIRECT_URI
-
 );
 
 
@@ -83,10 +81,6 @@ TOKEN_PATH,
 JSON.stringify(tokens)
 );
 
-console.log(
-"✅ CONNECTÉ À GOOGLE DRIVE"
-);
-
 res.send(
 "Google Drive connecté ✅"
 );
@@ -101,11 +95,9 @@ res.send(
 // =======================
 
 async function uploadToDrive(
-
 filePath,
 fileName,
 mimeType='application/pdf'
-
 ){
 
 const drive=
@@ -198,9 +190,7 @@ try{
 const {text}=req.body;
 
 
-// ==================================
-// 🔥 NOUVEAU NOMMAGE INTELLIGENT
-// ==================================
+// NOMMAGE PDF
 
 const now=
 new Date();
@@ -259,20 +249,14 @@ firstLine
 
 
 if(!slug){
-
 slug='Document';
-
 }
 
 }
 
 
 const fileName=
-
 `ADNAYA_${slug}_${stamp}.pdf`;
-
-
-// ==================================
 
 
 const filePath=
@@ -296,17 +280,12 @@ filePath
 doc.pipe(stream);
 
 
-// ======================
-// CLEAN TEXT
-// ======================
+// CLEAN
 
 let cleanText=
 (text||"")
 
-.replace(
-/\r\n/g,
-"\n"
-)
+.replace(/\r\n/g,"\n")
 
 .replace(
 /[^\x09\x0A\x0D\x20-\x7EÀ-ÿ•]/g,
@@ -325,15 +304,11 @@ const paragraphs=
 cleanText.split('\n');
 
 
-
-// ======================
-// FORMAT ONLY
-// ======================
+// FORMAT
 
 paragraphs.forEach(p=>{
 
-const line=
-p.trim();
+const line=p.trim();
 
 if(!line){
 
@@ -342,7 +317,6 @@ doc.moveDown(.7);
 return;
 
 }
-
 
 
 // LISTES
@@ -363,27 +337,17 @@ line.startsWith('• ')
 ){
 
 doc
-
 .fillColor('#111111')
-
 .font('Helvetica')
-
 .fontSize(11.5)
 
 .text(
-
 line,
-
 {
-
 indent:18,
-
 lineGap:4,
-
 align:'left'
-
 }
-
 );
 
 doc.moveDown(.3);
@@ -391,7 +355,6 @@ doc.moveDown(.3);
 return;
 
 }
-
 
 
 
@@ -404,13 +367,9 @@ line.length<65
 &&
 
 (
-
 line===line.toUpperCase()
-
 ||
-
 line.endsWith(':')
-
 )
 
 ){
@@ -418,25 +377,15 @@ line.endsWith(':')
 doc.moveDown(.6);
 
 doc
-
 .fillColor('#0A66C2')
-
-.font(
-'Helvetica-Bold'
-)
-
+.font('Helvetica-Bold')
 .fontSize(13.5)
 
 .text(
-
 line,
-
 {
-
 align:'left'
-
 }
-
 );
 
 doc.moveDown(.4);
@@ -447,34 +396,22 @@ return;
 
 
 
-
 // PARAGRAPHES
 
 doc
-
 .fillColor('#222222')
-
 .font('Helvetica')
-
 .fontSize(11.5)
 
 .text(
-
 line,
-
 {
-
 align:'justify',
-
 lineGap:5
-
 }
-
 );
 
-
 doc.moveDown(.5);
-
 
 
 });
@@ -482,60 +419,35 @@ doc.moveDown(.5);
 
 
 
-// ======================
 // SIGNATURE
-// ======================
 
 doc.moveDown(2);
 
 doc
-
 .strokeColor('#dddddd')
-
-.moveTo(
-55,
-doc.y
-)
-
-.lineTo(
-540,
-doc.y
-)
-
+.moveTo(55,doc.y)
+.lineTo(540,doc.y)
 .stroke();
-
 
 doc.moveDown(.6);
 
-
 doc
-
 .fillColor('#666666')
-
 .fontSize(9)
 
 .text(
-
 'Generated via ADNAYA PDF Engine',
-
 {
-
 align:'center'
-
 }
-
 );
-
 
 
 doc.end();
 
 
 
-
-// ======================
 // UPLOAD
-// ======================
 
 stream.on(
 'finish',
@@ -544,59 +456,38 @@ async()=>{
 try{
 
 const link=
-
 await uploadToDrive(
-
 filePath,
-
 fileName,
-
 'application/pdf'
-
 );
 
-
 return res.json({
-
 success:true,
-
 pdf_url:link
-
 });
-
 
 }
 
 catch(err){
 
-console.error(err);
-
 return res.status(500).json({
-
 success:false,
-
 error:err.message
-
 });
 
 }
 
 });
-
 
 
 }
 
 catch(err){
 
-console.error(err);
-
 return res.status(500).json({
-
 success:false,
-
 error:'Erreur serveur'
-
 });
 
 }
@@ -649,17 +540,8 @@ error:
 
 const cleanText=
 text
-
-.replace(
-/\r\n/g,
-"\n"
-)
-
-.replace(
-/\n{3,}/g,
-"\n\n"
-)
-
+.replace(/\r\n/g,"\n")
+.replace(/\n{3,}/g,"\n\n")
 .trim();
 
 
@@ -667,6 +549,50 @@ const date=
 new Date()
 .toISOString()
 .split('T')[0];
+
+
+
+// 🔥 NOMMAGE REQUETE
+
+const firstRequestLine=
+
+cleanText
+.split('\n')
+.find(
+x=>x.trim()
+);
+
+
+let requestSlug='Request';
+
+
+if(firstRequestLine){
+
+requestSlug=
+
+firstRequestLine
+
+.replace(
+/[^a-zA-Z0-9À-ÿ ]/g,
+''
+)
+
+.trim()
+
+.split(' ')
+
+.slice(0,5)
+
+.join('_');
+
+
+if(!requestSlug){
+
+requestSlug='Request';
+
+}
+
+}
 
 
 
@@ -691,7 +617,7 @@ END REQUEST
 
 const fileNameTxt=
 
-`REQUEST_${date}_${Date.now()}.txt`;
+`REQUEST_${requestSlug}_${date}.txt`;
 
 
 const filePathTxt=
@@ -701,46 +627,36 @@ const filePathTxt=
 
 
 fs.writeFileSync(
-
 filePathTxt,
-
 content,
-
 'utf8'
-
 );
 
 
 
 
 await uploadToDrive(
-
 filePathTxt,
-
 fileNameTxt,
-
 'text/plain'
-
 );
 
 
 
+
+// 🔥 NOMMAGE PIECE JOINTE
 
 if(file){
 
 const fileName=
 
-`FILE_${date}_${file.originalname}`;
+`ATTACH_${requestSlug}_${file.originalname}`;
 
 
 await uploadToDrive(
-
 file.path,
-
 fileName,
-
 file.mimetype
-
 );
 
 }
@@ -748,24 +664,13 @@ file.mimetype
 
 
 return res.json({
-
 success:true
-
 });
-
 
 
 }
 
 catch(err){
-
-console.error(
-
-"❌ ERREUR REQUETE:",
-
-err
-
-);
 
 return res.json({
 
@@ -787,13 +692,10 @@ error:err.message
 const PORT=
 process.env.PORT||10000;
 
-
 app.listen(PORT,()=>{
 
 console.log(
-
 `🚀 Server running on port ${PORT}`
-
 );
 
 });
