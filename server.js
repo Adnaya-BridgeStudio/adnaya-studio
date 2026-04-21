@@ -295,49 +295,22 @@ return;
 
 
 
-// =======================
-// TABLEAUX (AJOUT SEUL)
-// =======================
-
 if(line.includes('|')){
 
-const cols=
-line
-.split('|')
-.map(c=>c.trim());
-
-const col1=55;
-const col2=220;
-const col3=360;
-
 doc
-.font('Helvetica')
+.fillColor('#111111')
+.font('Courier')
 .fontSize(10.5)
-.fillColor('#111111');
 
-doc.text(
-cols[0]||'',
-col1,
-doc.y
-);
-
-if(cols[1]){
-doc.text(
-cols[1],
-col2,
-doc.y
-);
+.text(
+line,
+{
+align:'left',
+lineGap:3
 }
-
-if(cols[2]){
-doc.text(
-cols[2],
-col3,
-doc.y
 );
-}
 
-doc.moveDown(.7);
+doc.moveDown(.4);
 
 return;
 
