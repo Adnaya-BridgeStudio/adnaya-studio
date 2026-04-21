@@ -13,7 +13,6 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-const TOKEN_PATH='/tmp/token.json';
 
 const oauth2Client=
 new google.auth.OAuth2(
@@ -31,18 +30,7 @@ process.env.GOOGLE_REFRESH_TOKEN
 // TOKEN
 // =======================
 
-if(fs.existsSync(TOKEN_PATH)){
 
-const tokens=
-JSON.parse(
-fs.readFileSync(TOKEN_PATH)
-);
-
-oauth2Client.setCredentials(tokens);
-
-console.log("✅ Token chargé");
-
-}
 
 
 
@@ -80,17 +68,21 @@ await oauth2Client.getToken(code);
 
 oauth2Client.setCredentials(tokens);
 
-fs.writeFileSync(
-TOKEN_PATH,
-JSON.stringify(tokens)
+console.log(
+"⚠ Nouveau refresh token si présent:"
+);
+
+console.log(
+tokens.refresh_token
+||
+"Pas de nouveau refresh token retourné"
 );
 
 res.send(
-"Google Drive connecté ✅"
+"Google Drive connecté ✅\nCopiez le refresh token affiché dans les logs Render si nouveau."
 );
 
 });
-
 
 
 
