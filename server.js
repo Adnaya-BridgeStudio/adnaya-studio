@@ -22,18 +22,25 @@ process.env.GOOGLE_CLIENT_SECRET,
 process.env.GOOGLE_REDIRECT_URI
 );
 
+
 // =======================
 // TOKEN
 // =======================
 
 if(fs.existsSync(TOKEN_PATH)){
+
 const tokens=
 JSON.parse(
 fs.readFileSync(TOKEN_PATH)
 );
+
 oauth2Client.setCredentials(tokens);
+
 console.log("✅ Token chargé");
+
 }
+
+
 
 // =======================
 // AUTH
@@ -43,17 +50,24 @@ app.get('/auth',(req,res)=>{
 
 const url=
 oauth2Client.generateAuthUrl({
+
 access_type:'offline',
+
 scope:[
 'https://www.googleapis.com/auth/drive.file'
 ]
+
 });
 
 res.redirect(url);
 
 });
 
-app.get('/auth/callback',async(req,res)=>{
+
+
+app.get(
+'/auth/callback',
+async(req,res)=>{
 
 const {code}=req.query;
 
@@ -73,6 +87,9 @@ res.send(
 
 });
 
+
+
+
 // =======================
 // DRIVE
 // =======================
@@ -85,47 +102,64 @@ mimeType='application/pdf'
 
 const drive=
 google.drive({
+
 version:'v3',
 auth:oauth2Client
+
 });
+
 
 const response=
 await drive.files.create({
 
 requestBody:{
+
 name:fileName,
+
 parents:[
 "1CtSfuBQCGqF7fgNFRSRlYUt7RLK8Aey8"
 ]
+
 },
 
 media:{
+
 mimeType:mimeType,
+
 body:
 fs.createReadStream(
 filePath
 )
+
 }
 
 });
 
+
 const fileId=
 response.data.id;
+
 
 await drive.permissions.create({
 
 fileId,
 
 requestBody:{
+
 role:'reader',
+
 type:'anyone'
+
 }
 
 });
 
+
 return `https://drive.google.com/file/d/${fileId}/view`;
 
 }
+
+
 
 
 // =======================
@@ -139,6 +173,8 @@ res.send(
 );
 
 });
+
+
 
 
 // =======================
@@ -179,24 +215,38 @@ now.getMinutes()
 
 
 const firstLine=
+
 (text||'')
+
 .split('\n')
-.find(x=>x.trim());
+
+.find(
+x=>x.trim()
+);
+
 
 let slug='Document';
+
 
 if(firstLine){
 
 slug=
+
 firstLine
+
 .replace(
 /[^a-zA-Z0-9À-ÿ ]/g,
 ''
 )
+
 .trim()
+
 .split(' ')
+
 .slice(0,4)
+
 .join('_');
+
 
 if(!slug){
 slug='Document';
@@ -204,17 +254,23 @@ slug='Document';
 
 }
 
+
 const fileName=
 `ADNAYA_${slug}_${stamp}.pdf`;
+
 
 const filePath=
 `/tmp/${fileName}`;
 
+
 const doc=
 new PDFDocument({
+
 size:'A4',
 margin:55
+
 });
+
 
 const stream=
 fs.createWriteStream(
@@ -266,11 +322,18 @@ return;
 // LISTES
 
 if(
+
 line.startsWith('- ')
+
 ||
+
 line.startsWith('• ')
+
 ||
-/^[0-9]+\./.test(line)
+
+/^[0-9]+\./
+.test(line)
+
 ){
 
 doc
@@ -295,39 +358,20 @@ return;
 
 
 
-if(line.includes('|')){
-
-doc
-.fillColor('#111111')
-.font('Courier')
-.fontSize(10.5)
-
-.text(
-line,
-{
-align:'left',
-lineGap:3
-}
-);
-
-doc.moveDown(.4);
-
-return;
-
-}
-
-
-
 // TITRES
 
 if(
+
 line.length<65
+
 &&
+
 (
 line===line.toUpperCase()
 ||
 line.endsWith(':')
 )
+
 ){
 
 doc.moveDown(.6);
@@ -369,6 +413,7 @@ lineGap:5
 
 doc.moveDown(.5);
 
+
 });
 
 
@@ -396,6 +441,7 @@ doc
 align:'center'
 }
 );
+
 
 doc.end();
 
@@ -434,6 +480,7 @@ error:err.message
 
 });
 
+
 }
 
 catch(err){
@@ -448,6 +495,11 @@ error:'Erreur serveur'
 });
 
 
+
+
+
+
+
 // =======================
 // REQUETE CLIENT
 // =======================
@@ -459,17 +511,32 @@ async(req,res)=>{
 
 try{
 
-const { text, contact }=req.body;
+const {
+text,
+contact
+}=req.body;
+
 const file=req.file;
 
-if(!text||!contact){
+
+if(
+!text
+||
+!contact
+){
 
 return res.json({
+
 success:false,
-error:"Texte ou contact manquant"
+
+error:
+"Texte ou contact manquant"
+
 });
 
 }
+
+
 
 const cleanText=
 text
@@ -477,36 +544,55 @@ text
 .replace(/\n{3,}/g,"\n\n")
 .trim();
 
+
 const date=
 new Date()
 .toISOString()
 .split('T')[0];
 
+
+
 const firstRequestLine=
+
 cleanText
 .split('\n')
-.find(x=>x.trim());
+.find(
+x=>x.trim()
+);
+
 
 let requestSlug='Request';
+
 
 if(firstRequestLine){
 
 requestSlug=
+
 firstRequestLine
+
 .replace(
 /[^a-zA-Z0-9À-ÿ ]/g,
 ''
 )
+
 .trim()
+
 .split(' ')
+
 .slice(0,5)
+
 .join('_');
 
+
 if(!requestSlug){
+
 requestSlug='Request';
+
 }
 
 }
+
+
 
 const content=
 `===== ADNAYA CLIENT REQUEST =====
@@ -525,11 +611,18 @@ END REQUEST
 -------------------------
 `;
 
+
+
 const fileNameTxt=
+
 `REQUEST_${requestSlug}_${date}.txt`;
 
+
 const filePathTxt=
+
 `/tmp/${fileNameTxt}`;
+
+
 
 fs.writeFileSync(
 filePathTxt,
@@ -537,16 +630,24 @@ content,
 'utf8'
 );
 
+
+
+
 await uploadToDrive(
 filePathTxt,
 fileNameTxt,
 'text/plain'
 );
 
+
+
+
 if(file){
 
 const fileName=
+
 `ATTACH_${requestSlug}_${file.originalname}`;
+
 
 await uploadToDrive(
 file.path,
@@ -556,22 +657,31 @@ file.mimetype
 
 }
 
+
+
 return res.json({
 success:true
 });
+
 
 }
 
 catch(err){
 
 return res.json({
+
 success:false,
+
 error:err.message
+
 });
 
 }
 
 });
+
+
+
 
 
 // =======================
@@ -590,44 +700,72 @@ const file=req.file;
 if(!file){
 
 return res.json({
+
 success:false,
+
 error:'Aucun fichier reçu'
+
 });
 
 }
+
 
 const date=
 new Date()
 .toISOString()
 .split('T')[0];
 
+
 const fileName=
+
 `UPLOAD_${date}_${file.originalname}`;
+
 
 const link=
 await uploadToDrive(
+
 file.path,
+
 fileName,
+
 file.mimetype
+
 );
 
+
 return res.json({
+
 success:true,
+
 image_url:link
+
 });
+
 
 }
 
 catch(err){
 
+console.error(
+'❌ UPLOAD IMAGE:',
+err
+);
+
 return res.json({
+
 success:false,
+
 error:err.message
+
 });
 
 }
 
 });
+
+
+
+
 
 const PORT=
 process.env.PORT||10000;
