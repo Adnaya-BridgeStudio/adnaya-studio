@@ -764,7 +764,9 @@ error:err.message
 });
 
 
-
+app.get('/debug-token',(req,res)=>{
+res.json(oauth2Client.credentials);
+});
 
 
 const PORT=
