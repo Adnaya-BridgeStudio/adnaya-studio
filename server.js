@@ -163,7 +163,6 @@ type:'anyone'
 });
 
 
-// 🔥 BUG FIX undefined
 return `https://drive.google.com/file/d/${fileId}/view`;
 
 }
@@ -198,8 +197,83 @@ try{
 
 const {text}=req.body;
 
+
+// ==================================
+// 🔥 NOUVEAU NOMMAGE INTELLIGENT
+// ==================================
+
+const now=
+new Date();
+
+const stamp=
+
+now.toISOString().slice(0,10)
+
++'_'
+
++
+
+String(
+now.getHours()
+).padStart(2,'0')
+
++
+
+String(
+now.getMinutes()
+).padStart(2,'0');
+
+
+const firstLine=
+
+(text||'')
+
+.split('\n')
+
+.find(
+x=>x.trim()
+);
+
+
+let slug='Document';
+
+
+if(firstLine){
+
+slug=
+
+firstLine
+
+.replace(
+/[^a-zA-Z0-9À-ÿ ]/g,
+''
+)
+
+.trim()
+
+.split(' ')
+
+.slice(0,4)
+
+.join('_');
+
+
+if(!slug){
+
+slug='Document';
+
+}
+
+}
+
+
 const fileName=
-`file_${Date.now()}.pdf`;
+
+`ADNAYA_${slug}_${stamp}.pdf`;
+
+
+// ==================================
+
 
 const filePath=
 `/tmp/${fileName}`;
@@ -254,7 +328,6 @@ cleanText.split('\n');
 
 // ======================
 // FORMAT ONLY
-// (NO CHANGE OF CONTENT)
 // ======================
 
 paragraphs.forEach(p=>{
@@ -272,7 +345,7 @@ return;
 
 
 
-// LISTES SI EXISTENT
+// LISTES
 
 if(
 
@@ -322,7 +395,7 @@ return;
 
 
 
-// TITRES LÉGERS
+// TITRES
 
 if(
 
@@ -375,7 +448,7 @@ return;
 
 
 
-// PARAGRAPHE NORMAL
+// PARAGRAPHES
 
 doc
 
@@ -459,6 +532,7 @@ doc.end();
 
 
 
+
 // ======================
 // UPLOAD
 // ======================
@@ -528,6 +602,7 @@ error:'Erreur serveur'
 }
 
 });
+
 
 
 
