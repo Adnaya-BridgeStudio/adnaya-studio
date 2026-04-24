@@ -42,14 +42,12 @@ app.get('/auth',(req,res)=>{
 
 const url=
 oauth2Client.generateAuthUrl({
-
-access_type:'offline',
-
-scope:[
-'https://www.googleapis.com/auth/drive.file'
-]
-
-});
+  access_type:'offline',
+  prompt:'consent',
+  scope:[
+    'https://www.googleapis.com/auth/drive.file'
+  ]
+})
 
 res.redirect(url);
 
