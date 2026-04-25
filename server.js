@@ -186,11 +186,11 @@ app.post('/generate-pdf', async (req, res) => {
     // CLEAN TEXT
     // =======================
 
-    let cleanText = (text || "")
-      .replace(/\r\n/g, "\n")
-      .replace(/[^\x09\x0A\x0D\x20-\x7EÀ-ÿ•]/g, '')
-      .replace(/\n{3,}/g, "\n\n")
-      .trim();
+let cleanText = (text || "")
+  .replace(/\r\n/g, "\n")
+  .replace(/\u0000/g, '') // supprime uniquement les caractères null
+  .replace(/\n{3,}/g, "\n\n")
+  .trim();
 
     const paragraphs = cleanText.split('\n');
 
@@ -214,10 +214,10 @@ app.post('/generate-pdf', async (req, res) => {
         /^[0-9]+\./.test(line)
       ) {
 
-        doc
-          .fillColor('#111111')
-          .font('Helvetica')
-          .fontSize(11.5)
+doc
+  .fillColor('#111111')
+  .font(FONT_REGULAR)
+  .fontSize(11.5)
           .text(line, {
             indent: 18,
             lineGap: 4,
@@ -238,7 +238,7 @@ app.post('/generate-pdf', async (req, res) => {
 
         doc
           .fillColor('#0A66C2')
-          .font('Helvetica-Bold')
+          .font(FONT_BOLD)
           .fontSize(13.5)
           .text(line, { align: 'left' });
 
