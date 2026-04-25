@@ -159,10 +159,10 @@ app.post('/generate-pdf', async (req, res) => {
 
         .replace(/⭐|🌟/g, '★')
 
-        .replace(/📌|📍/g, '•')
+        .replace(/📌|📍/g, '-')
         .replace(/👉|➡️/g, '➤')
 
-        .replace(/🔹|🔸/g, '•')
+        .replace(/🔹|🔸/g, '-')
 
         .replace(/💡/g, '➤')
         .replace(/📊|📈/g, '▸')
@@ -172,7 +172,7 @@ app.post('/generate-pdf', async (req, res) => {
         .replace(/🏆/g, '★')
         .replace(/🎓/g, '◆')
 
-        .replace(/👤/g, '•')
+        .replace(/👤/g, '-')
         .replace(/📞/g, '☎')
         .replace(/📧/g, '✉')
         .replace(/🌐/g, '⌘');
@@ -232,21 +232,25 @@ app.post('/generate-pdf', async (req, res) => {
     const fontBold = fs.existsSync(FONT_BOLD) ? FONT_BOLD : 'Helvetica-Bold';
 
     // =======================
-    // CLEAN TEXT (SAFE)
+    // CLEAN TEXT (FINAL FIX)
     // =======================
 
     let cleanText = normalizeEmojis(text || "")
-      .replace(/\r\n/g, "\n")
 
-      // 🔥 corrige : • 1. → 1.
-      .replace(/•\s*([0-9]+\.)/g, '$1 ')
+      // 🔥 remplace tous les bullets par -
+      .replace(/•/g, '-')
+
+      // 🔥 espace propre après -
+      .replace(/-\s*/g, '- ')
+
+      // 🔥 corrige : - 1. → 1.
+      .replace(/-\s*([0-9]+\.)/g, '$1 ')
 
       // 🔥 espace propre après numérotation
       .replace(/([0-9]+\.)\s*/g, '$1 ')
 
-      // 🔥 supprime UNIQUEMENT caractères vraiment cassés
+      .replace(/\r\n/g, "\n")
       .replace(/\u0000/g, '')
-
       .replace(/\n{3,}/g, "\n\n")
       .trim();
 
@@ -265,23 +269,17 @@ app.post('/generate-pdf', async (req, res) => {
         return;
       }
 
-      // LIST + NUMÉROTATION
+      // LIST
       if (
         line.startsWith('- ') ||
-        line.startsWith('• ') ||
         /^[0-9]{1,2}\./.test(line)
       ) {
-
-        const content = line
-          .replace(/^•\s*/, '')
-          .replace(/^- /, '')
-          .trim();
 
         doc
           .fillColor('#111111')
           .font(fontRegular)
           .fontSize(11.5)
-          .text(content, {
+          .text(line, {
             indent: 18,
             lineGap: 4,
             align: 'left'
