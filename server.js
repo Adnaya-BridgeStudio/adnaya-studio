@@ -129,7 +129,7 @@ app.get('/', (req, res) => {
 });
 
 // =======================
-// PDF ENGINE PRO VISUEL
+// PDF ENGINE PRO FINAL
 // =======================
 
 app.post('/generate-pdf', async (req, res) => {
@@ -150,10 +150,8 @@ app.post('/generate-pdf', async (req, res) => {
         .replace(/🚀/g, '➤')
         .replace(/⚠️/g, '⚠')
         .replace(/💰/g, '$')
-
         .replace(/📌|📍|🔹|🔸/g, '-')
         .replace(/👉|➡️/g, '➤')
-
         .replace(/📞/g, '☎')
         .replace(/📧/g, '✉')
         .replace(/🌐/g, '⌘');
@@ -164,23 +162,34 @@ app.post('/generate-pdf', async (req, res) => {
     // =======================
 
     const doc = new PDFDocument({ size: 'A4', margin: 55 });
+
     const fileName = `ADNAYA_${Date.now()}.pdf`;
     const filePath = `/tmp/${fileName}`;
 
     const stream = fs.createWriteStream(filePath);
     doc.pipe(stream);
 
-    const fontRegular = '/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf';
-    const fontBold = '/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf';
+    const FONT_REGULAR = '/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf';
+    const FONT_BOLD = '/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf';
+
+    const fontRegular = fs.existsSync(FONT_REGULAR) ? FONT_REGULAR : 'Helvetica';
+    const fontBold = fs.existsSync(FONT_BOLD) ? FONT_BOLD : 'Helvetica-Bold';
 
     // =======================
-    // CLEAN TEXT
+    // CLEAN TEXT (CRITICAL FIX)
     // =======================
 
     let cleanText = normalizeEmojis(text || "")
+
+      // 🔥 suppression ASCII tables
+      .replace(/^[\|\-\+\s]+$/gm, '')
+      .replace(/\+-[-+\s]+\+/g, '')
+
+      // 🔥 bullets
       .replace(/•/g, '-')
       .replace(/-\s*/g, '- ')
-      .replace(/- {2,}/g, '') // 🔥 supprime lignes parasites
+
+      // 🔥 normalisation
       .replace(/\r\n/g, "\n")
       .replace(/\n{3,}/g, "\n\n")
       .trim();
@@ -188,7 +197,7 @@ app.post('/generate-pdf', async (req, res) => {
     const lines = cleanText.split('\n');
 
     // =======================
-    // TABLE ENGINE PRO
+    // TABLE SYSTEM
     // =======================
 
     let tableBuffer = [];
@@ -208,27 +217,30 @@ app.post('/generate-pdf', async (req, res) => {
 
         let rowHeight = 20;
 
-        // CALCUL HEIGHT (multi-line)
-        row.forEach((cell) => {
+        // auto height
+        row.forEach(cell => {
           const h = doc.heightOfString(cell, {
             width: colWidth - 10
           });
           rowHeight = Math.max(rowHeight, h + 10);
         });
 
-        // HEADER STYLE
+        // HEADER
         if (rowIndex === 0) {
-          doc.rect(startX, y, tableWidth, rowHeight).fill('#f0f0f0');
+          doc.rect(startX, y, tableWidth, rowHeight).fill('#eaeaea');
+        }
+
+        // ZEBRA
+        if (rowIndex % 2 === 1) {
+          doc.rect(startX, y, tableWidth, rowHeight).fill('#f9f9f9');
         }
 
         row.forEach((cell, i) => {
 
           const x = startX + i * colWidth;
 
-          // BORDER
           doc.rect(x, y, colWidth, rowHeight).stroke('#cccccc');
 
-          // TEXT
           doc
             .font(rowIndex === 0 ? fontBold : fontRegular)
             .fontSize(10.5)
@@ -270,20 +282,41 @@ app.post('/generate-pdf', async (req, res) => {
           .filter(Boolean);
 
         if (cols.length >= 2) {
+
+          // 🔥 merge broken lines
+          if (tableBuffer.length > 0) {
+            const lastRow = tableBuffer[tableBuffer.length - 1];
+
+            if (cols.length < lastRow.length) {
+              lastRow[lastRow.length - 1] += ' ' + cols.join(' ');
+              return;
+            }
+          }
+
           tableBuffer.push(cols);
           return;
         }
       }
 
       // ===== TABLE SPACES =====
-      const cols = trimmed.split(/\s{2,}/);
+      const cols = trimmed.split(/\s{2,}|\t/);
 
-      if (cols.length >= 3) {
+      if (cols.length >= 3 || /\d+\s+\w+/.test(trimmed)) {
+
+        if (tableBuffer.length > 0) {
+          const lastRow = tableBuffer[tableBuffer.length - 1];
+
+          if (cols.length < lastRow.length) {
+            lastRow[lastRow.length - 1] += ' ' + cols.join(' ');
+            return;
+          }
+        }
+
         tableBuffer.push(cols);
         return;
       }
 
-      // ===== FLUSH TABLE =====
+      // ===== END TABLE =====
       drawTable(tableBuffer);
 
       // ===== LIST =====
@@ -343,15 +376,29 @@ app.post('/generate-pdf', async (req, res) => {
     // =======================
 
     stream.on('finish', async () => {
-      const link = await uploadToDrive(filePath, fileName);
-      res.json({ success: true, pdf_url: link });
+
+      try {
+        const link = await uploadToDrive(filePath, fileName);
+
+        return res.json({
+          success: true,
+          pdf_url: link
+        });
+
+      } catch (err) {
+        return res.status(500).json({
+          success: false,
+          error: err.message
+        });
+      }
+
     });
 
   } catch (err) {
 
     console.error("PDF ERROR:", err);
 
-    res.status(500).json({
+    return res.status(500).json({
       success: false,
       error: 'Erreur serveur PDF'
     });
