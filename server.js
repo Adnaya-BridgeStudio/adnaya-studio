@@ -146,70 +146,50 @@ app.post('/generate-pdf', async (req, res) => {
         .replace(/🚀/g, '➤')
         .replace(/⚠️/g, '⚠')
         .replace(/💰/g, '$')
-
         .replace(/👉|➡️|➡/g, '➤')
         .replace(/⬅️|⬅/g, '←')
         .replace(/⬆️|⬆/g, '↑')
         .replace(/⬇️|⬇/g, '↓')
-
         .replace(/📌|📍|🔹|🔸|▪️|▫️/g, '-')
         .replace(/✔️|✅/g, '✔')
         .replace(/❌/g, '✖')
         .replace(/➕/g, '+')
         .replace(/➖/g, '-')
-
         .replace(/⭐|🌟/g, '★')
         .replace(/🔥/g, '✦')
         .replace(/💡/g, '➤')
         .replace(/🎉/g, '✦')
-
         .replace(/📞/g, '☎')
         .replace(/📧|✉️/g, '✉')
         .replace(/🌐/g, '⌘')
         .replace(/📱/g, '☎')
-
         .replace(/📊|📈|📉/g, '▸')
         .replace(/🏆/g, '★')
         .replace(/🎓/g, '◆')
         .replace(/💼/g, '■')
-
         .replace(/⏰|⌚|🕒/g, '⏱')
         .replace(/📅/g, '📅')
-
         .replace(/💵|💸|💶|💷|🪙/g, '$')
-
         .replace(/📄|📁/g, '■')
         .replace(/📝/g, '✎')
-
         .replace(/🚨/g, '⚠')
         .replace(/❗|❕/g, '!')
-
         .replace(/💻|🖥️/g, '⌘')
         .replace(/⚙️/g, '⚙')
-
         .replace(/👤|👥/g, '■')
-
         .replace(/❤️|💙|💚|💛|🖤/g, '♥')
         .replace(/☑️/g, '✔')
-
         .replace(/➤{2,}/g, '➤')
         .replace(/-{2,}/g, '-');
     }
 
-    // =======================
-    // FILE NAME
-    // =======================
-
     const now = new Date();
-
     const stamp =
       now.toISOString().slice(0, 10) + '_' +
       String(now.getHours()).padStart(2, '0') +
       String(now.getMinutes()).padStart(2, '0');
 
-    const firstLine = (text || '')
-      .split('\n')
-      .find(x => x.trim());
+    const firstLine = (text || '').split('\n').find(x => x.trim());
 
     let slug = 'Document';
 
@@ -236,21 +216,12 @@ app.post('/generate-pdf', async (req, res) => {
     const fontRegular = fs.existsSync(FONT_REGULAR) ? FONT_REGULAR : 'Helvetica';
     const fontBold = fs.existsSync(FONT_BOLD) ? FONT_BOLD : 'Helvetica-Bold';
 
-    // =======================
-    // CLEAN TEXT (FIX NUMÉROTATION)
-    // =======================
-
     let cleanText = normalizeEmojis(text || "")
-
       .replace(/^[\|\-\+\=\s]+$/gm, '')
-
-      // 🔥 FIX NUMÉROTATION
       .replace(/[0-9]+\.\s*□/g, match => match.replace('□', ''))
       .replace(/([0-9]+\.)\s*/g, '$1 ')
-
       .replace(/•/g, '-')
       .replace(/-\s*/g, '- ')
-
       .replace(/\r\n/g, "\n")
       .replace(/\n{3,}/g, "\n\n")
       .trim();
@@ -260,7 +231,6 @@ app.post('/generate-pdf', async (req, res) => {
     let tableBuffer = [];
 
     function drawTable(rows) {
-
       if (!rows.length) return;
 
       const startX = 55;
@@ -275,9 +245,7 @@ app.post('/generate-pdf', async (req, res) => {
         let rowHeight = 20;
 
         row.forEach(cell => {
-          const h = doc.heightOfString(cell, {
-            width: colWidth - 10
-          });
+          const h = doc.heightOfString(cell, { width: colWidth - 10 });
           rowHeight = Math.max(rowHeight, h + 10);
         });
 
@@ -295,7 +263,6 @@ app.post('/generate-pdf', async (req, res) => {
         }
 
         row.forEach((cell, i) => {
-
           const x = startX + i * colWidth;
 
           doc.rect(x, y, colWidth, rowHeight).stroke('#cccccc');
@@ -308,7 +275,6 @@ app.post('/generate-pdf', async (req, res) => {
               width: colWidth - 10,
               align: i === 0 ? 'left' : 'right'
             });
-
         });
 
         y += rowHeight;
@@ -323,6 +289,12 @@ app.post('/generate-pdf', async (req, res) => {
 
       const trimmed = line.trim();
 
+      // 🔥 TRANSFORMATION DES "________"
+      if (/^_{5,}$/.test(trimmed)) {
+        doc.moveDown(1.2);
+        return;
+      }
+
       if (!trimmed) {
         drawTable(tableBuffer);
         doc.moveDown(0.5);
@@ -330,12 +302,8 @@ app.post('/generate-pdf', async (req, res) => {
       }
 
       if (index === 0) {
-        doc
-          .font(fontBold)
-          .fontSize(18)
-          .fillColor('#111111')
+        doc.font(fontBold).fontSize(18).fillColor('#111111')
           .text(trimmed, { align: 'center' });
-
         doc.moveDown(1);
         return;
       }
@@ -363,7 +331,6 @@ app.post('/generate-pdf', async (req, res) => {
         return;
       }
 
-      // 🔥 NUMÉROTATION PROPRE
       if (/^[0-9]{1,2}\./.test(trimmed)) {
         doc.fillColor('#333333').font(fontRegular).text(trimmed, { indent: 10 });
         doc.moveDown(0.2);
@@ -380,10 +347,8 @@ app.post('/generate-pdf', async (req, res) => {
         return;
       }
 
-      doc.fillColor('#333333').font(fontRegular).fontSize(11.5).text(trimmed, {
-        align: 'justify',
-        lineGap: 5
-      });
+      doc.fillColor('#333333').font(fontRegular).fontSize(11.5)
+        .text(trimmed, { align: 'justify', lineGap: 5 });
 
       doc.moveDown(0.5);
 
