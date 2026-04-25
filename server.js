@@ -139,19 +139,62 @@ app.post('/generate-pdf', async (req, res) => {
     const { text } = req.body;
 
     function normalizeEmojis(input) {
-      return input
-        .replace(/🎯/g, '▶')
-        .replace(/🧬/g, '◆')
-        .replace(/🟢|🟠|🟡|🔴/g, '●')
-        .replace(/🚀/g, '➤')
-        .replace(/⚠️/g, '⚠')
-        .replace(/💰/g, '$')
-        .replace(/📌|📍|🔹|🔸/g, '-')
-        .replace(/👉|➡️/g, '➤')
-        .replace(/📞/g, '☎')
-        .replace(/📧/g, '✉')
-        .replace(/🌐/g, '⌘');
-    }
+  return input
+    .replace(/🎯/g, '▶')
+    .replace(/🧬/g, '◆')
+    .replace(/🟢|🟠|🟡|🔴/g, '●')
+    .replace(/🚀/g, '➤')
+    .replace(/⚠️/g, '⚠')
+    .replace(/💰/g, '$')
+
+    .replace(/👉|➡️|➡/g, '➤')
+    .replace(/⬅️|⬅/g, '←')
+    .replace(/⬆️|⬆/g, '↑')
+    .replace(/⬇️|⬇/g, '↓')
+
+    .replace(/📌|📍|🔹|🔸|▪️|▫️/g, '-')
+    .replace(/✔️|✅/g, '✔')
+    .replace(/❌/g, '✖')
+    .replace(/➕/g, '+')
+    .replace(/➖/g, '-')
+
+    .replace(/⭐|🌟/g, '★')
+    .replace(/🔥/g, '✦')
+    .replace(/💡/g, '➤')
+    .replace(/🎉/g, '✦')
+
+    .replace(/📞/g, '☎')
+    .replace(/📧|✉️/g, '✉')
+    .replace(/🌐/g, '⌘')
+    .replace(/📱/g, '☎')
+
+    .replace(/📊|📈|📉/g, '▸')
+    .replace(/🏆/g, '★')
+    .replace(/🎓/g, '◆')
+    .replace(/💼/g, '■')
+
+    .replace(/⏰|⌚|🕒/g, '⏱')
+    .replace(/📅/g, '📅')
+
+    .replace(/💵|💸|💶|💷|🪙/g, '$')
+
+    .replace(/📄|📁/g, '■')
+    .replace(/📝/g, '✎')
+
+    .replace(/🚨/g, '⚠')
+    .replace(/❗|❕/g, '!')
+
+    .replace(/💻|🖥️/g, '⌘')
+    .replace(/⚙️/g, '⚙')
+
+    .replace(/👤|👥/g, '■')
+
+    .replace(/❤️|💙|💚|💛|🖤/g, '♥')
+    .replace(/☑️/g, '✔')
+
+    .replace(/➤{2,}/g, '➤')
+    .replace(/-{2,}/g, '-');
+}
 
     // =======================
     // FILE NAME (RESTORED)
