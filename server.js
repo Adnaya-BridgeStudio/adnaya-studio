@@ -138,29 +138,6 @@ app.post('/generate-pdf', async (req, res) => {
 
     const { text } = req.body;
 
-    // =======================
-    // NORMALIZERS
-    // =======================
-
-    function normalizeEmojis(input) {
-      return input
-        .replace(/🎯/g, '▶')
-        .replace(/🧬/g, '◆')
-        .replace(/🟢|🟠|🟡|🔴/g, '●')
-        .replace(/🚀/g, '➤')
-        .replace(/⚠️/g, '⚠');
-    }
-
-    function normalizeBullets(input) {
-      return input
-        .replace(/[▪■●◦◉]/g, '•')
-        .replace(/•\s*/g, '• ');
-    }
-
-    // =======================
-    // FILE NAME
-    // =======================
-
     const now = new Date();
 
     const stamp =
@@ -168,7 +145,9 @@ app.post('/generate-pdf', async (req, res) => {
       String(now.getHours()).padStart(2, '0') +
       String(now.getMinutes()).padStart(2, '0');
 
-    const firstLine = (text || '').split('\n').find(x => x.trim());
+    const firstLine = (text || '')
+      .split('\n')
+      .find(x => x.trim());
 
     let slug = 'Document';
 
@@ -178,7 +157,9 @@ app.post('/generate-pdf', async (req, res) => {
         .trim()
         .split(' ')
         .slice(0, 4)
-        .join('_') || 'Document';
+        .join('_');
+
+      if (!slug) slug = 'Document';
     }
 
     const fileName = `ADNAYA_${slug}_${stamp}.pdf`;
@@ -188,27 +169,30 @@ app.post('/generate-pdf', async (req, res) => {
     // PDF INIT
     // =======================
 
-    const doc = new PDFDocument({ size: 'A4', margin: 55 });
+    const doc = new PDFDocument({
+      size: 'A4',
+      margin: 55
+    });
+
     const stream = fs.createWriteStream(filePath);
     doc.pipe(stream);
 
     // =======================
-    // FONT SAFE
+    // FONT UNICODE (SAFE)
     // =======================
 
-    const FONT_REGULAR_PATH = '/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf';
-    const FONT_BOLD_PATH = '/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf';
+    const FONT_REGULAR = '/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf';
+    const FONT_BOLD = '/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf';
 
-    const fontRegular = fs.existsSync(FONT_REGULAR_PATH) ? FONT_REGULAR_PATH : 'Helvetica';
-    const fontBold = fs.existsSync(FONT_BOLD_PATH) ? FONT_BOLD_PATH : 'Helvetica-Bold';
+    // fallback sécurité si font absente
+    const fontRegular = fs.existsSync(FONT_REGULAR) ? FONT_REGULAR : 'Helvetica';
+    const fontBold = fs.existsSync(FONT_BOLD) ? FONT_BOLD : 'Helvetica-Bold';
 
     // =======================
     // CLEAN TEXT
     // =======================
 
-    let cleanText = normalizeBullets(
-      normalizeEmojis(text || "")
-    )
+    let cleanText = (text || "")
       .replace(/\r\n/g, "\n")
       .replace(/\u0000/g, '')
       .replace(/\n{3,}/g, "\n\n")
@@ -217,7 +201,7 @@ app.post('/generate-pdf', async (req, res) => {
     const paragraphs = cleanText.split('\n');
 
     // =======================
-    // RENDER ENGINE
+    // RENDER
     // =======================
 
     paragraphs.forEach(p => {
@@ -229,55 +213,19 @@ app.post('/generate-pdf', async (req, res) => {
         return;
       }
 
-      // ---------- SEPARATOR ----------
-      if (line.startsWith('____')) {
-
-        doc.moveDown(1);
-
-        doc
-          .strokeColor('#cccccc')
-          .moveTo(55, doc.y)
-          .lineTo(540, doc.y)
-          .stroke();
-
-        doc.moveDown(1);
-        return;
-      }
-
-      // ---------- CONTACT BLOCK ----------
+      // LIST
       if (
-        line.includes('+243') ||
-        line.includes('@') ||
-        line.includes('Consultant') ||
-        line.includes('ADNAYA LLC –')
-      ) {
-
-        doc
-          .fillColor('#0A66C2')
-          .font(fontRegular)
-          .fontSize(11.5)
-          .text(line, { align: 'center' });
-
-        doc.moveDown(0.4);
-        return;
-      }
-
-      // ---------- LIST ----------
-      if (
-        line.startsWith('• ') ||
         line.startsWith('- ') ||
+        line.startsWith('• ') ||
         /^[0-9]+\./.test(line)
       ) {
-
-        const content = line.replace(/^•\s*/, '');
 
         doc
           .fillColor('#111111')
           .font(fontRegular)
           .fontSize(11.5)
-          .text('•', { continued: true })
-          .text(' ' + content, {
-            indent: 10,
+          .text(line, {
+            indent: 18,
             lineGap: 4,
             align: 'left'
           });
@@ -286,45 +234,25 @@ app.post('/generate-pdf', async (req, res) => {
         return;
       }
 
-      // ---------- STRONG TITLE ----------
-      const isStrongTitle =
-        line.length < 80 &&
-        line === line.toUpperCase() &&
-        !line.startsWith('•');
-
-      if (isStrongTitle) {
+      // TITLE
+      if (
+        line.length < 65 &&
+        (line === line.toUpperCase() || line.endsWith(':'))
+      ) {
 
         doc.moveDown(0.6);
 
         doc
           .fillColor('#0A66C2')
           .font(fontBold)
-          .fontSize(14)
-          .text(line);
+          .fontSize(13.5)
+          .text(line, { align: 'left' });
 
         doc.moveDown(0.4);
         return;
       }
 
-      // ---------- TITLE ----------
-      if (
-        line.length < 65 &&
-        (line.endsWith(':'))
-      ) {
-
-        doc.moveDown(0.5);
-
-        doc
-          .fillColor('#333333')
-          .font(fontBold)
-          .fontSize(12.5)
-          .text(line);
-
-        doc.moveDown(0.3);
-        return;
-      }
-
-      // ---------- PARAGRAPH ----------
+      // PARAGRAPH
       doc
         .fillColor('#222222')
         .font(fontRegular)
@@ -335,7 +263,6 @@ app.post('/generate-pdf', async (req, res) => {
         });
 
       doc.moveDown(0.5);
-
     });
 
     // =======================
@@ -400,8 +327,6 @@ app.post('/generate-pdf', async (req, res) => {
   }
 
 });
-
-
 // =======================
 // CLIENT REQUEST
 // =======================
