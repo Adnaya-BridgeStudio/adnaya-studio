@@ -139,65 +139,65 @@ app.post('/generate-pdf', async (req, res) => {
     const { text } = req.body;
 
     function normalizeEmojis(input) {
-  return input
-    .replace(/🎯/g, '▶')
-    .replace(/🧬/g, '◆')
-    .replace(/🟢|🟠|🟡|🔴/g, '●')
-    .replace(/🚀/g, '➤')
-    .replace(/⚠️/g, '⚠')
-    .replace(/💰/g, '$')
+      return input
+        .replace(/🎯/g, '▶')
+        .replace(/🧬/g, '◆')
+        .replace(/🟢|🟠|🟡|🔴/g, '●')
+        .replace(/🚀/g, '➤')
+        .replace(/⚠️/g, '⚠')
+        .replace(/💰/g, '$')
 
-    .replace(/👉|➡️|➡/g, '➤')
-    .replace(/⬅️|⬅/g, '←')
-    .replace(/⬆️|⬆/g, '↑')
-    .replace(/⬇️|⬇/g, '↓')
+        .replace(/👉|➡️|➡/g, '➤')
+        .replace(/⬅️|⬅/g, '←')
+        .replace(/⬆️|⬆/g, '↑')
+        .replace(/⬇️|⬇/g, '↓')
 
-    .replace(/📌|📍|🔹|🔸|▪️|▫️/g, '-')
-    .replace(/✔️|✅/g, '✔')
-    .replace(/❌/g, '✖')
-    .replace(/➕/g, '+')
-    .replace(/➖/g, '-')
+        .replace(/📌|📍|🔹|🔸|▪️|▫️/g, '-')
+        .replace(/✔️|✅/g, '✔')
+        .replace(/❌/g, '✖')
+        .replace(/➕/g, '+')
+        .replace(/➖/g, '-')
 
-    .replace(/⭐|🌟/g, '★')
-    .replace(/🔥/g, '✦')
-    .replace(/💡/g, '➤')
-    .replace(/🎉/g, '✦')
+        .replace(/⭐|🌟/g, '★')
+        .replace(/🔥/g, '✦')
+        .replace(/💡/g, '➤')
+        .replace(/🎉/g, '✦')
 
-    .replace(/📞/g, '☎')
-    .replace(/📧|✉️/g, '✉')
-    .replace(/🌐/g, '⌘')
-    .replace(/📱/g, '☎')
+        .replace(/📞/g, '☎')
+        .replace(/📧|✉️/g, '✉')
+        .replace(/🌐/g, '⌘')
+        .replace(/📱/g, '☎')
 
-    .replace(/📊|📈|📉/g, '▸')
-    .replace(/🏆/g, '★')
-    .replace(/🎓/g, '◆')
-    .replace(/💼/g, '■')
+        .replace(/📊|📈|📉/g, '▸')
+        .replace(/🏆/g, '★')
+        .replace(/🎓/g, '◆')
+        .replace(/💼/g, '■')
 
-    .replace(/⏰|⌚|🕒/g, '⏱')
-    .replace(/📅/g, '📅')
+        .replace(/⏰|⌚|🕒/g, '⏱')
+        .replace(/📅/g, '📅')
 
-    .replace(/💵|💸|💶|💷|🪙/g, '$')
+        .replace(/💵|💸|💶|💷|🪙/g, '$')
 
-    .replace(/📄|📁/g, '■')
-    .replace(/📝/g, '✎')
+        .replace(/📄|📁/g, '■')
+        .replace(/📝/g, '✎')
 
-    .replace(/🚨/g, '⚠')
-    .replace(/❗|❕/g, '!')
+        .replace(/🚨/g, '⚠')
+        .replace(/❗|❕/g, '!')
 
-    .replace(/💻|🖥️/g, '⌘')
-    .replace(/⚙️/g, '⚙')
+        .replace(/💻|🖥️/g, '⌘')
+        .replace(/⚙️/g, '⚙')
 
-    .replace(/👤|👥/g, '■')
+        .replace(/👤|👥/g, '■')
 
-    .replace(/❤️|💙|💚|💛|🖤/g, '♥')
-    .replace(/☑️/g, '✔')
+        .replace(/❤️|💙|💚|💛|🖤/g, '♥')
+        .replace(/☑️/g, '✔')
 
-    .replace(/➤{2,}/g, '➤')
-    .replace(/-{2,}/g, '-');
-}
+        .replace(/➤{2,}/g, '➤')
+        .replace(/-{2,}/g, '-');
+    }
 
     // =======================
-    // FILE NAME (RESTORED)
+    // FILE NAME
     // =======================
 
     const now = new Date();
@@ -219,17 +219,11 @@ app.post('/generate-pdf', async (req, res) => {
         .trim()
         .split(' ')
         .slice(0, 4)
-        .join('_');
-
-      if (!slug) slug = 'Document';
+        .join('_') || 'Document';
     }
 
     const fileName = `ADNAYA_${slug}_${stamp}.pdf`;
     const filePath = `/tmp/${fileName}`;
-
-    // =======================
-    // INIT
-    // =======================
 
     const doc = new PDFDocument({ size: 'A4', margin: 55 });
 
@@ -243,12 +237,16 @@ app.post('/generate-pdf', async (req, res) => {
     const fontBold = fs.existsSync(FONT_BOLD) ? FONT_BOLD : 'Helvetica-Bold';
 
     // =======================
-    // CLEAN TEXT
+    // CLEAN TEXT (FIX NUMÉROTATION)
     // =======================
 
     let cleanText = normalizeEmojis(text || "")
 
       .replace(/^[\|\-\+\=\s]+$/gm, '')
+
+      // 🔥 FIX NUMÉROTATION
+      .replace(/[0-9]+\.\s*□/g, match => match.replace('□', ''))
+      .replace(/([0-9]+\.)\s*/g, '$1 ')
 
       .replace(/•/g, '-')
       .replace(/-\s*/g, '- ')
@@ -258,10 +256,6 @@ app.post('/generate-pdf', async (req, res) => {
       .trim();
 
     const lines = cleanText.split('\n');
-
-    // =======================
-    // TABLE SYSTEM
-    // =======================
 
     let tableBuffer = [];
 
@@ -287,18 +281,15 @@ app.post('/generate-pdf', async (req, res) => {
           rowHeight = Math.max(rowHeight, h + 10);
         });
 
-        // PAGE BREAK
         if (y + rowHeight > doc.page.height - 60) {
           doc.addPage();
           y = 55;
         }
 
-        // HEADER
         if (rowIndex === 0) {
           doc.rect(startX, y, tableWidth, rowHeight).fill('#2F6FED');
         }
 
-        // ZEBRA
         if (rowIndex % 2 === 1 && rowIndex !== 0) {
           doc.rect(startX, y, tableWidth, rowHeight).fill('#f5f5f5');
         }
@@ -328,10 +319,6 @@ app.post('/generate-pdf', async (req, res) => {
       tableBuffer = [];
     }
 
-    // =======================
-    // RENDER
-    // =======================
-
     lines.forEach((line, index) => {
 
       const trimmed = line.trim();
@@ -342,7 +329,6 @@ app.post('/generate-pdf', async (req, res) => {
         return;
       }
 
-      // MAIN TITLE
       if (index === 0) {
         doc
           .font(fontBold)
@@ -354,21 +340,14 @@ app.post('/generate-pdf', async (req, res) => {
         return;
       }
 
-      // TABLE ASCII
       if (trimmed.includes('|')) {
-
-        const cols = trimmed
-          .split('|')
-          .map(c => c.trim())
-          .filter(Boolean);
-
+        const cols = trimmed.split('|').map(c => c.trim()).filter(Boolean);
         if (cols.length >= 2) {
           tableBuffer.push(cols);
           return;
         }
       }
 
-      // TABLE SPACES
       const cols = trimmed.split(/\s{2,}|\t/);
 
       if (cols.length >= 3 || /\d+\s+\w+/.test(trimmed)) {
@@ -378,42 +357,33 @@ app.post('/generate-pdf', async (req, res) => {
 
       drawTable(tableBuffer);
 
-      // LIST
       if (trimmed.startsWith('- ')) {
-        doc
-          .fillColor('#333333')
-          .font(fontRegular)
-          .text(trimmed, { indent: 18 });
+        doc.fillColor('#333333').font(fontRegular).text(trimmed, { indent: 18 });
         doc.moveDown(0.3);
         return;
       }
 
-      // TITLE
+      // 🔥 NUMÉROTATION PROPRE
+      if (/^[0-9]{1,2}\./.test(trimmed)) {
+        doc.fillColor('#333333').font(fontRegular).text(trimmed, { indent: 10 });
+        doc.moveDown(0.2);
+        return;
+      }
+
       if (
         trimmed.length < 65 &&
         (trimmed === trimmed.toUpperCase() || trimmed.endsWith(':'))
       ) {
         doc.moveDown(0.6);
-
-        doc
-          .fillColor('#0A66C2')
-          .font(fontBold)
-          .fontSize(13.5)
-          .text(trimmed);
-
+        doc.fillColor('#0A66C2').font(fontBold).fontSize(13.5).text(trimmed);
         doc.moveDown(0.4);
         return;
       }
 
-      // PARAGRAPH
-      doc
-        .fillColor('#333333')
-        .font(fontRegular)
-        .fontSize(11.5)
-        .text(trimmed, {
-          align: 'justify',
-          lineGap: 5
-        });
+      doc.fillColor('#333333').font(fontRegular).fontSize(11.5).text(trimmed, {
+        align: 'justify',
+        lineGap: 5
+      });
 
       doc.moveDown(0.5);
 
@@ -421,10 +391,7 @@ app.post('/generate-pdf', async (req, res) => {
 
     drawTable(tableBuffer);
 
-    // =======================
-    // SIGNATURE (CENTERED RESTORED)
-    // =======================
-
+    // SIGNATURE (INCHANGÉE)
     doc.moveDown(2);
 
     doc
@@ -439,47 +406,22 @@ app.post('/generate-pdf', async (req, res) => {
       .font(fontRegular)
       .fontSize(9)
       .fillColor('#666666')
-      .text('Generated via ADNAYA PDF Engine', {
-        align: 'center'
-      });
+      .text('Generated via ADNAYA PDF Engine', { align: 'center' });
 
     doc.end();
 
-    // =======================
-    // UPLOAD
-    // =======================
-
     stream.on('finish', async () => {
-
-      try {
-        const link = await uploadToDrive(filePath, fileName);
-
-        return res.json({
-          success: true,
-          pdf_url: link
-        });
-
-      } catch (err) {
-        return res.status(500).json({
-          success: false,
-          error: err.message
-        });
-      }
-
+      const link = await uploadToDrive(filePath, fileName);
+      res.json({ success: true, pdf_url: link });
     });
 
   } catch (err) {
-
     console.error("PDF ERROR:", err);
-
-    return res.status(500).json({
-      success: false,
-      error: 'Erreur serveur PDF'
-    });
-
+    res.status(500).json({ success: false, error: 'Erreur serveur PDF' });
   }
 
 });
+
 // =======================
 // CLIENT REQUEST
 // =======================
