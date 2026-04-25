@@ -41,6 +41,7 @@ console.log("CREDENTIALS:", oauth2Client.credentials);
 // =======================
 
 app.get('/auth', (req, res) => {
+
   const url = oauth2Client.generateAuthUrl({
     access_type: 'offline',
     prompt: 'consent',
@@ -50,8 +51,11 @@ app.get('/auth', (req, res) => {
   res.redirect(url);
 });
 
+
 app.get('/auth/callback', async (req, res) => {
+
   try {
+
     const { code } = req.query;
 
     if (!code) {
@@ -59,6 +63,7 @@ app.get('/auth/callback', async (req, res) => {
     }
 
     const { tokens } = await oauth2Client.getToken(code);
+
     oauth2Client.setCredentials(tokens);
 
     console.log("Refresh token si présent:");
@@ -67,7 +72,9 @@ app.get('/auth/callback', async (req, res) => {
     return res.send("Google Drive connecté ✅");
 
   } catch (err) {
+
     console.error("AUTH CALLBACK ERROR:", err.message);
+
     return res.status(500).send("Erreur OAuth (mais serveur vivant)");
   }
 });
@@ -84,24 +91,30 @@ async function uploadToDrive(filePath, fileName, mimeType = 'application/pdf') {
   });
 
   const response = await drive.files.create({
+
     requestBody: {
       name: fileName,
       parents: ["1CtSfuBQCGqF7fgNFRSRlYUt7RLK8Aey8"]
     },
+
     media: {
       mimeType,
       body: fs.createReadStream(filePath)
     }
+
   });
 
   const fileId = response.data.id;
 
   await drive.permissions.create({
+
     fileId,
+
     requestBody: {
       role: 'reader',
       type: 'anyone'
     }
+
   });
 
   return `https://drive.google.com/file/d/${fileId}/view`;
@@ -116,12 +129,18 @@ app.get('/', (req, res) => {
 });
 
 // =======================
-// PDF GENERATOR
+// PDF ENGINE
 // =======================
 
 app.post('/generate-pdf', async (req, res) => {
+
   try {
+
     const { text } = req.body;
+
+    // =======================
+    // FILE NAME
+    // =======================
 
     const now = new Date();
 
@@ -130,28 +149,44 @@ app.post('/generate-pdf', async (req, res) => {
       String(now.getHours()).padStart(2, '0') +
       String(now.getMinutes()).padStart(2, '0');
 
-    const firstLine = (text || '').split('\n').find(x => x.trim());
+    const firstLine = (text || '')
+      .split('\n')
+      .find(x => x.trim());
 
     let slug = 'Document';
 
     if (firstLine) {
+
       slug = firstLine
         .replace(/[^a-zA-Z0-9À-ÿ ]/g, '')
         .trim()
         .split(' ')
         .slice(0, 4)
-        .join('_') || 'Document';
+        .join('_');
+
+      if (!slug) slug = 'Document';
     }
 
     const fileName = `ADNAYA_${slug}_${stamp}.pdf`;
     const filePath = `/tmp/${fileName}`;
 
-    const doc = new PDFDocument({ size: 'A4', margin: 55 });
-    const stream = fs.createWriteStream(filePath);
+    // =======================
+    // PDF INIT
+    // =======================
 
+    const doc = new PDFDocument({
+      size: 'A4',
+      margin: 55
+    });
+
+    const stream = fs.createWriteStream(filePath);
     doc.pipe(stream);
 
-    const cleanText = (text || "")
+    // =======================
+    // CLEAN TEXT
+    // =======================
+
+    let cleanText = (text || "")
       .replace(/\r\n/g, "\n")
       .replace(/[^\x09\x0A\x0D\x20-\x7EÀ-ÿ•]/g, '')
       .replace(/\n{3,}/g, "\n\n")
@@ -159,7 +194,12 @@ app.post('/generate-pdf', async (req, res) => {
 
     const paragraphs = cleanText.split('\n');
 
+    // =======================
+    // RENDER
+    // =======================
+
     paragraphs.forEach(p => {
+
       const line = p.trim();
 
       if (!line) {
@@ -167,53 +207,116 @@ app.post('/generate-pdf', async (req, res) => {
         return;
       }
 
+      // LIST
       if (
         line.startsWith('- ') ||
         line.startsWith('• ') ||
         /^[0-9]+\./.test(line)
       ) {
-        doc.fillColor('#111').fontSize(11.5).text(line, { indent: 18, lineGap: 4 });
+
+        doc
+          .fillColor('#111111')
+          .font('Helvetica')
+          .fontSize(11.5)
+          .text(line, {
+            indent: 18,
+            lineGap: 4,
+            align: 'left'
+          });
+
         doc.moveDown(0.3);
         return;
       }
 
+      // TITLE
       if (
         line.length < 65 &&
         (line === line.toUpperCase() || line.endsWith(':'))
       ) {
+
         doc.moveDown(0.6);
-        doc.fillColor('#0A66C2').font('Helvetica-Bold').fontSize(13.5).text(line);
+
+        doc
+          .fillColor('#0A66C2')
+          .font('Helvetica-Bold')
+          .fontSize(13.5)
+          .text(line, { align: 'left' });
+
         doc.moveDown(0.4);
         return;
       }
 
-      doc.fillColor('#222').font('Helvetica').fontSize(11.5)
-        .text(line, { align: 'justify', lineGap: 5 });
+      // PARAGRAPH
+      doc
+        .fillColor('#222222')
+        .font('Helvetica')
+        .fontSize(11.5)
+        .text(line, {
+          align: 'justify',
+          lineGap: 5
+        });
 
       doc.moveDown(0.5);
     });
 
+    // =======================
+    // SIGNATURE
+    // =======================
+
     doc.moveDown(2);
-    doc.strokeColor('#ddd').moveTo(55, doc.y).lineTo(540, doc.y).stroke();
+
+    doc
+      .strokeColor('#dddddd')
+      .moveTo(55, doc.y)
+      .lineTo(540, doc.y)
+      .stroke();
 
     doc.moveDown(0.6);
-    doc.fillColor('#666').fontSize(9)
-      .text('Generated via ADNAYA PDF Engine', { align: 'center' });
+
+    doc
+      .fillColor('#666666')
+      .fontSize(9)
+      .text('Generated via ADNAYA PDF Engine', {
+        align: 'center'
+      });
 
     doc.end();
 
+    // =======================
+    // UPLOAD
+    // =======================
+
     stream.on('finish', async () => {
+
       try {
+
         const link = await uploadToDrive(filePath, fileName);
-        res.json({ success: true, pdf_url: link });
+
+        return res.json({
+          success: true,
+          pdf_url: link
+        });
+
       } catch (err) {
-        res.status(500).json({ success: false, error: err.message });
+
+        return res.status(500).json({
+          success: false,
+          error: err.message
+        });
+
       }
+
     });
 
   } catch (err) {
-    res.status(500).json({ success: false, error: 'Erreur serveur' });
+
+    return res.status(500).json({
+      success: false,
+      error: 'Erreur serveur'
+    });
+
   }
+
 });
 
 // =======================
@@ -221,17 +324,42 @@ app.post('/generate-pdf', async (req, res) => {
 // =======================
 
 app.post('/submit-request', upload.single('file'), async (req, res) => {
+
   try {
+
     const { text, contact } = req.body;
     const file = req.file;
 
     if (!text || !contact) {
-      return res.json({ success: false, error: "Texte ou contact manquant" });
+      return res.json({
+        success: false,
+        error: "Texte ou contact manquant"
+      });
     }
 
-    const cleanText = text.replace(/\r\n/g, "\n").replace(/\n{3,}/g, "\n\n").trim();
+    const cleanText = text
+      .replace(/\r\n/g, "\n")
+      .replace(/\n{3,}/g, "\n\n")
+      .trim();
 
     const date = new Date().toISOString().split('T')[0];
+
+    const firstRequestLine =
+      cleanText.split('\n').find(x => x.trim());
+
+    let requestSlug = 'Request';
+
+    if (firstRequestLine) {
+
+      requestSlug = firstRequestLine
+        .replace(/[^a-zA-Z0-9À-ÿ ]/g, '')
+        .trim()
+        .split(' ')
+        .slice(0, 5)
+        .join('_');
+
+      if (!requestSlug) requestSlug = 'Request';
+    }
 
     const content = `===== ADNAYA CLIENT REQUEST =====
 
@@ -249,7 +377,7 @@ END REQUEST
 -------------------------
 `;
 
-    const fileNameTxt = `REQUEST_${date}.txt`;
+    const fileNameTxt = `REQUEST_${requestSlug}_${date}.txt`;
     const filePathTxt = `/tmp/${fileNameTxt}`;
 
     fs.writeFileSync(filePathTxt, content, 'utf8');
@@ -257,14 +385,27 @@ END REQUEST
     await uploadToDrive(filePathTxt, fileNameTxt, 'text/plain');
 
     if (file) {
-      await uploadToDrive(file.path, file.originalname, file.mimetype);
+
+      const fileName = `ATTACH_${requestSlug}_${file.originalname}`;
+
+      await uploadToDrive(
+        file.path,
+        fileName,
+        file.mimetype
+      );
     }
 
-    res.json({ success: true });
+    return res.json({ success: true });
 
   } catch (err) {
-    res.json({ success: false, error: err.message });
+
+    return res.json({
+      success: false,
+      error: err.message
+    });
+
   }
+
 });
 
 // =======================
@@ -272,24 +413,44 @@ END REQUEST
 // =======================
 
 app.post('/upload-image', upload.single('image'), async (req, res) => {
+
   try {
+
     const file = req.file;
 
     if (!file) {
-      return res.json({ success: false, error: 'Aucun fichier reçu' });
+      return res.json({
+        success: false,
+        error: 'Aucun fichier reçu'
+      });
     }
 
     const date = new Date().toISOString().split('T')[0];
+
     const fileName = `UPLOAD_${date}_${file.originalname}`;
 
-    const link = await uploadToDrive(file.path, fileName, file.mimetype);
+    const link = await uploadToDrive(
+      file.path,
+      fileName,
+      file.mimetype
+    );
 
-    res.json({ success: true, image_url: link });
+    return res.json({
+      success: true,
+      image_url: link
+    });
 
   } catch (err) {
+
     console.error('❌ UPLOAD IMAGE:', err);
-    res.json({ success: false, error: err.message });
+
+    return res.json({
+      success: false,
+      error: err.message
+    });
+
   }
+
 });
 
 // =======================
