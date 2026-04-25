@@ -138,6 +138,50 @@ app.post('/generate-pdf', async (req, res) => {
 
     const { text } = req.body;
 
+    // =======================
+    // NORMALIZE EMOJIS
+    // =======================
+
+    function normalizeEmojis(input) {
+      return input
+        .replace(/🎯/g, '▶')
+        .replace(/🧬/g, '◆')
+        .replace(/🟢|🟠|🟡|🔴/g, '●')
+        .replace(/🚀/g, '➤')
+        .replace(/⚠️/g, '⚠')
+
+        .replace(/💰/g, '$')
+
+        .replace(/✅|✔️/g, '✔')
+        .replace(/❌/g, '✖')
+        .replace(/❗/g, '!')
+        .replace(/❓/g, '?')
+
+        .replace(/⭐|🌟/g, '★')
+
+        .replace(/📌|📍/g, '•')
+        .replace(/👉|➡️/g, '➤')
+
+        .replace(/🔹|🔸/g, '•')
+
+        .replace(/💡/g, '➤')
+        .replace(/📊|📈/g, '▸')
+
+        .replace(/🧾|📄/g, '▣')
+
+        .replace(/🏆/g, '★')
+        .replace(/🎓/g, '◆')
+
+        .replace(/👤/g, '•')
+        .replace(/📞/g, '☎')
+        .replace(/📧/g, '✉')
+        .replace(/🌐/g, '⌘');
+    }
+
+    // =======================
+    // FILE NAME
+    // =======================
+
     const now = new Date();
 
     const stamp =
@@ -178,23 +222,31 @@ app.post('/generate-pdf', async (req, res) => {
     doc.pipe(stream);
 
     // =======================
-    // FONT UNICODE (SAFE)
+    // FONT SAFE
     // =======================
 
     const FONT_REGULAR = '/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf';
     const FONT_BOLD = '/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf';
 
-    // fallback sécurité si font absente
     const fontRegular = fs.existsSync(FONT_REGULAR) ? FONT_REGULAR : 'Helvetica';
     const fontBold = fs.existsSync(FONT_BOLD) ? FONT_BOLD : 'Helvetica-Bold';
 
     // =======================
-    // CLEAN TEXT
+    // CLEAN TEXT (FIX GLOBAL)
     // =======================
 
-    let cleanText = (text || "")
+    let cleanText = normalizeEmojis(text || "")
       .replace(/\r\n/g, "\n")
-      .replace(/\u0000/g, '')
+
+      // supprime caractères invisibles (□ etc.)
+      .replace(/[^\x20-\x7EÀ-ÿ\n]/g, '')
+
+      // corrige : • 1. → 1.
+      .replace(/•\s*([0-9]+\.)/g, '$1 ')
+
+      // espace propre après numérotation
+      .replace(/([0-9]+\.)\s*/g, '$1 ')
+
       .replace(/\n{3,}/g, "\n\n")
       .trim();
 
@@ -213,18 +265,23 @@ app.post('/generate-pdf', async (req, res) => {
         return;
       }
 
-      // LIST
+      // LIST + NUMÉROTATION
       if (
         line.startsWith('- ') ||
         line.startsWith('• ') ||
-        /^[0-9]+\./.test(line)
+        /^[0-9]{1,2}\./.test(line)
       ) {
+
+        const content = line
+          .replace(/^•\s*/, '')
+          .replace(/^- /, '')
+          .trim();
 
         doc
           .fillColor('#111111')
           .font(fontRegular)
           .fontSize(11.5)
-          .text(line, {
+          .text(content, {
             indent: 18,
             lineGap: 4,
             align: 'left'
